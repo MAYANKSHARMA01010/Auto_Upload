@@ -78,7 +78,7 @@ export default function UploadPage() {
       toast.success("Video uploaded successfully");
       setStep(2);
     } catch (err: any) {
-      toast.error(err.response?.data?.detail || "Upload failed");
+      toast.error(typeof err.response?.data?.detail === "string" ? err.response.data.detail : "Upload failed");
     } finally {
       setIsUploading(false);
     }
@@ -100,7 +100,7 @@ export default function UploadPage() {
       setThumbnailUrl(res.data.thumbnail_url);
       toast.success("Thumbnail uploaded successfully");
     } catch (err: any) {
-      toast.error(err.response?.data?.detail || "Thumbnail upload failed");
+      toast.error(typeof err.response?.data?.detail === "string" ? err.response.data.detail : "Thumbnail upload failed");
     } finally {
       setIsUploading(false);
     }
@@ -159,7 +159,7 @@ export default function UploadPage() {
       toast.success(status === "scheduled" ? "Posts scheduled successfully!" : "Saved as draft");
       router.push(status === "scheduled" ? "/scheduled" : "/drafts");
     } catch (err: any) {
-      toast.error(err.response?.data?.detail || "Failed to save posts");
+      toast.error(typeof err.response?.data?.detail === "string" ? err.response.data.detail : "Failed to save posts");
     } finally {
       setIsUploading(false);
     }

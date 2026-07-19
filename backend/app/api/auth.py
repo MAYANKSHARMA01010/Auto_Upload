@@ -3,8 +3,9 @@ Auth API routes — register, login, logout, refresh, forgot/reset password.
 """
 import logging
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.core.config import settings
 
 from app.core.dependencies import get_current_user, get_db
 from app.core.security import (
@@ -55,7 +56,7 @@ async def register(
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(data: LoginRequest, response: Response, db: AsyncSession = Depends(get_db)):
     """Authenticate and receive JWT tokens."""
     user = await UserService.authenticate(db, data.email, data.password)
     if not user:
@@ -68,16 +69,30 @@ async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account is disabled",
         )
-    return TokenResponse(
-        access_token=create_access_token(user.id),
-        refresh_token=create_refresh_token(user.id),
+    
+    refresh_token = create_refresh_token(user.id)
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=(settings.ENVIRONMENT != "development"),
+        samesite="lax",
+        max_age=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
     )
+    
+    return TokenResponse(access_token=create_access_token(user.id))
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh_token(data: RefreshRequest, db: AsyncSession = Depends(get_db)):
-    """Exchange a refresh token for a new access token."""
-    user_id = verify_token(data.refresh_token, token_type="refresh")
+async def refresh_token(request: Request, response: Response, db: AsyncSession = Depends(get_db)):
+    """Exchange a refresh token (from cookie) for a new access token."""
+    refresh_token_cookie = request.cookies.get("refresh_token")
+    if not refresh_token_cookie:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token missing"
+        )
+        
+    user_id = verify_token(refresh_token_cookie, token_type="refresh")
     if not user_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
@@ -88,10 +103,29 @@ async def refresh_token(data: RefreshRequest, db: AsyncSession = Depends(get_db)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
         )
-    return TokenResponse(
-        access_token=create_access_token(user.id),
-        refresh_token=create_refresh_token(user.id),
+        
+    new_refresh_token = create_refresh_token(user.id)
+    response.set_cookie(
+        key="refresh_token",
+        value=new_refresh_token,
+        httponly=True,
+        secure=(settings.ENVIRONMENT != "development"),
+        samesite="lax",
+        max_age=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
     )
+    
+    return TokenResponse(access_token=create_access_token(user.id))
+
+@router.post("/logout", response_model=MessageResponse)
+async def logout(response: Response):
+    """Log out by clearing the refresh token cookie."""
+    response.delete_cookie(
+        key="refresh_token",
+        httponly=True,
+        secure=(settings.ENVIRONMENT != "development"),
+        samesite="lax"
+    )
+    return MessageResponse(message="Logged out successfully")
 
 
 @router.get("/me", response_model=UserResponse)

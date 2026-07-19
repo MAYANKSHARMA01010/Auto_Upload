@@ -33,27 +33,22 @@ export default function RegisterPage() {
       const response = await api.post("/auth/register", {
         email: values.email,
         password: values.password,
-        full_name: values.full_name,
+        name: values.full_name,
       });
 
       // After successful registration, log them in automatically
-      const formData = new URLSearchParams();
-      formData.append("username", values.email);
-      formData.append("password", values.password);
-
-      const loginRes = await api.post("/auth/login", formData, {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
+      const loginRes = await api.post("/auth/login", {
+        email: values.email,
+        password: values.password,
       });
 
       const { access_token, user } = loginRes.data;
-      setAuth(user, access_token, "refresh_token_mock");
+      setAuth(user, access_token);
       
       toast.success("Account created successfully!");
       router.push("/dashboard");
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || "Failed to create account");
+      toast.error(typeof error.response?.data?.detail === "string" ? error.response.data.detail : "Failed to create account");
     } finally {
       setIsLoading(false);
     }

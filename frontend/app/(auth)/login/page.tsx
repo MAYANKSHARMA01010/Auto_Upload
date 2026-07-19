@@ -30,22 +30,17 @@ export default function LoginPage() {
   const onSubmit = async (values: z.infer<typeof loginSchema>) => {
     setIsLoading(true);
     try {
-      const formData = new URLSearchParams();
-      formData.append("username", values.username);
-      formData.append("password", values.password);
-
-      const response = await api.post("/auth/login", formData, {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
+      const response = await api.post("/auth/login", {
+        email: values.username,
+        password: values.password,
       });
 
       const { access_token, user } = response.data;
-      setAuth(user, access_token, "refresh_token_mock");
+      setAuth(user, access_token);
       toast.success("Successfully logged in!");
       router.push("/dashboard");
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || "Invalid email or password");
+      toast.error(typeof error.response?.data?.detail === "string" ? error.response.data.detail : "Invalid email or password");
     } finally {
       setIsLoading(false);
     }
