@@ -16,15 +16,24 @@ class StorageService:
     """Wraps Cloudflare R2 (S3-compatible) for object storage."""
 
     def __init__(self) -> None:
-        self._client = boto3.client(
-            "s3",
-            endpoint_url=settings.R2_ENDPOINT_URL,
-            aws_access_key_id=settings.R2_ACCESS_KEY_ID,
-            aws_secret_access_key=settings.R2_SECRET_ACCESS_KEY,
-            region_name="auto",
-        )
+        self._client_instance = None
         self.bucket = settings.R2_BUCKET_NAME
         self.public_url = settings.R2_PUBLIC_URL.rstrip("/")
+
+    @property
+    def _client(self):
+        if self._client_instance is None:
+            # If endpoint is invalid or empty, boto3 will raise ValueError.
+            # Lazy initialization prevents the app from crashing on startup.
+            endpoint_url = settings.R2_ENDPOINT_URL if settings.R2_ENDPOINT_URL and settings.R2_ENDPOINT_URL != "https://" else None
+            self._client_instance = boto3.client(
+                "s3",
+                endpoint_url=endpoint_url,
+                aws_access_key_id=settings.R2_ACCESS_KEY_ID,
+                aws_secret_access_key=settings.R2_SECRET_ACCESS_KEY,
+                region_name="auto",
+            )
+        return self._client_instance
 
     # ------------------------------------------------------------------
     # Upload helpers
