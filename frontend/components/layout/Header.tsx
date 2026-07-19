@@ -1,66 +1,22 @@
-"use client";
-
-import { useAuthStore } from "@/stores/authStore";
-import { useRouter } from "next/navigation";
-import { LogOut, User as UserIcon } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import Link from "next/link";
 
 export function Header() {
-  const { user, logout } = useAuthStore();
-  const router = useRouter();
-
-  const handleLogout = () => {
-    logout();
-    router.push("/login");
-  };
-
-  const getInitials = (name?: string) => {
-    if (!name) return "U";
-    return name.substring(0, 2).toUpperCase();
-  };
-
   return (
-    <header className="flex h-14 items-center gap-4 border-b bg-card px-4 lg:h-[60px] lg:px-6 justify-between">
-      <div className="w-full flex-1">
-        {/* Can add global search here if needed */}
+    <header className="h-20 flex items-center justify-between px-clg border-b border-outline-variant bg-surface-container-lowest/80 backdrop-blur-md z-30">
+      <div className="relative w-64 md:w-96 hidden sm:block">
+        <span className="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+        <input className="w-full bg-surface-container-high border-outline-variant rounded-full pl-cxl pr-cmd py-cxs text-body-sm focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Search..." type="text" />
       </div>
-      <DropdownMenu>
-        <DropdownMenuTrigger className="inline-flex items-center justify-center rounded-full h-10 w-10 hover:bg-accent hover:text-accent-foreground">
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={user?.avatar_url || ""} alt={user?.name || "User"} />
-            <AvatarFallback>{getInitials(user?.name)}</AvatarFallback>
-          </Avatar>
-          <span className="sr-only">Toggle user menu</span>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuLabel>
-            <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium leading-none">{user?.name}</p>
-              <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
-            </div>
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => router.push("/settings")}>
-            <UserIcon className="mr-2 h-4 w-4" />
-            <span>Profile Settings</span>
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleLogout} className="text-red-500">
-            <LogOut className="mr-2 h-4 w-4" />
-            <span>Log out</span>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <div className="flex items-center gap-cmd ml-auto">
+        <button className="relative p-cxs text-on-surface-variant hover:text-primary transition-colors">
+          <span className="material-symbols-outlined">notifications</span>
+          <span className="absolute top-1 right-1 w-2 h-2 bg-error rounded-full border border-surface"></span>
+        </button>
+        <Link href="/upload" className="bg-primary-container text-white px-cmd py-cxs rounded-full font-label-md flex items-center gap-cxs hover:opacity-90 active:scale-95 transition-all">
+          <span className="material-symbols-outlined text-[18px]">add</span>
+          New Upload
+        </Link>
+      </div>
     </header>
   );
 }

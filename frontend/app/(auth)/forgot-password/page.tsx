@@ -48,7 +48,7 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <Card className="border-0 shadow-lg sm:border sm:shadow-sm">
+    <div className="min-h-screen flex items-center justify-center p-4 w-full"><div className="w-full max-w-md"><Card className="border-0 shadow-lg sm:border sm:shadow-sm">
       <CardHeader className="space-y-1 text-center">
         <CardTitle className="text-2xl font-bold tracking-tight">Reset Password</CardTitle>
         <CardDescription>
@@ -97,6 +97,6 @@ export default function ForgotPasswordPage() {
           </Link>
         </div>
       </CardFooter>
-    </Card>
+    </Card></div></div>
   );
 }

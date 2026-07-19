@@ -85,7 +85,7 @@ export default function DraftPostsPage() {
                       {post.platform}
                     </Badge>
                   </div>
-                  
+
                   <div className="flex flex-1 flex-col justify-between p-4 md:p-6">
                     <div className="flex justify-between items-start">
                       <div>
@@ -99,7 +99,7 @@ export default function DraftPostsPage() {
                           </span>
                         </div>
                       </div>
-                      
+
                       <DropdownMenu>
                         <DropdownMenuTrigger className="inline-flex items-center justify-center rounded-md h-10 w-10 hover:bg-accent hover:text-accent-foreground">
                           <MoreVertical className="h-4 w-4" />

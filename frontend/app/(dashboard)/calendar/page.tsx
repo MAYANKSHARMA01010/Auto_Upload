@@ -52,19 +52,18 @@ export default function CalendarPage() {
       for (let i = 0; i < 7; i++) {
         formattedDate = format(day, "d");
         const cloneDay = day;
-        
+
         // Find posts for this day
-        const dayPosts = posts?.filter(post => 
+        const dayPosts = posts?.filter(post =>
           post.schedule_datetime && isSameDay(parseISO(post.schedule_datetime), cloneDay)
         ) || [];
 
         days.push(
           <div
-            className={`min-h-[120px] p-2 border border-muted/50 ${
-              !isSameMonth(day, monthStart)
+            className={`min-h-[120px] p-2 border border-muted/50 ${!isSameMonth(day, monthStart)
                 ? "bg-muted/20 text-muted-foreground"
                 : "bg-card"
-            }`}
+              }`}
             key={day.toString()}
           >
             <div className="flex justify-end">
@@ -122,7 +121,7 @@ export default function CalendarPage() {
               </Button>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-7 mb-2">
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
               <div key={day} className="text-center text-sm font-medium text-muted-foreground pb-2">
@@ -130,7 +129,7 @@ export default function CalendarPage() {
               </div>
             ))}
           </div>
-          
+
           {renderCells()}
         </CardContent>
       </Card>

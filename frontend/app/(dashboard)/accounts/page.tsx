@@ -66,7 +66,7 @@ export default function AccountsPage() {
           <h2 className="text-3xl font-bold tracking-tight">Connected Accounts</h2>
           <p className="text-muted-foreground mt-1">Manage your social media platform connections.</p>
         </div>
-        
+
         <Dialog>
           <DialogTrigger render={<Button />}>
             <Plus className="mr-2 h-4 w-4" />
@@ -137,9 +137,9 @@ export default function AccountsPage() {
                     <Badge variant={account.is_active ? "default" : "destructive"}>
                       {account.is_active ? "Active" : "Expired"}
                     </Badge>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       className="text-muted-foreground hover:text-destructive -mr-2 -mt-2"
                       onClick={() => handleDisconnect(account.id)}
                     >

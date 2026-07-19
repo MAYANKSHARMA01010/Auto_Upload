@@ -37,27 +37,27 @@ export default function UploadPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [isUploading, setIsUploading] = useState(false);
-  
+
   // State
   const [videoId, setVideoId] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
-  
+
   const [scheduleDate, setScheduleDate] = useState<string>("");
   const [scheduleTime, setScheduleTime] = useState<string>("");
-  
+
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
-  
+
   // Platform specific forms state
   const [platformData, setPlatformData] = useState<Record<string, any>>({});
 
   const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     const formData = new FormData();
     formData.append("file", file);
-    
+
     setIsUploading(true);
     try {
       const res = await api.post("/videos/upload", formData, {
@@ -78,10 +78,10 @@ export default function UploadPage() {
     if (!videoId) return;
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     const formData = new FormData();
     formData.append("file", file);
-    
+
     setIsUploading(true);
     try {
       const res = await api.post(`/videos/${videoId}/thumbnail`, formData, {
@@ -97,7 +97,7 @@ export default function UploadPage() {
   };
 
   const togglePlatform = (platformId: string) => {
-    setSelectedPlatforms(prev => 
+    setSelectedPlatforms(prev =>
       prev.includes(platformId) ? prev.filter(p => p !== platformId) : [...prev, platformId]
     );
   };
@@ -115,13 +115,13 @@ export default function UploadPage() {
   const handleSave = async (status: "draft" | "scheduled") => {
     if (!videoId) return toast.error("Please upload a video first");
     if (selectedPlatforms.length === 0) return toast.error("Select at least one platform");
-    
+
     if (status === "scheduled" && (!scheduleDate || !scheduleTime)) {
       return toast.error("Please select schedule date and time");
     }
 
     setIsUploading(true);
-    
+
     try {
       let schedule_datetime = null;
       if (scheduleDate && scheduleTime) {
@@ -158,7 +158,7 @@ export default function UploadPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
+
         {/* Left Column - File Upload & Schedule */}
         <div className="md:col-span-1 space-y-6">
           <Card>
@@ -192,14 +192,14 @@ export default function UploadPage() {
                 <div className="space-y-2 pt-4 border-t">
                   <Label>Thumbnail (Optional)</Label>
                   {!thumbnailUrl ? (
-                     <div className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/50 transition-colors">
-                     <input type="file" accept="image/*" className="hidden" id="thumbnail-upload" onChange={handleThumbnailUpload} disabled={isUploading} />
-                     <label htmlFor="thumbnail-upload" className="cursor-pointer w-full flex flex-col items-center">
-                       {isUploading ? <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-2" /> : <ImageIcon className="h-8 w-8 text-muted-foreground mb-2" />}
-                       <span className="text-sm font-medium">Click to upload thumbnail</span>
-                       <span className="text-xs text-muted-foreground mt-1">JPG, PNG up to 20MB</span>
-                     </label>
-                   </div>
+                    <div className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/50 transition-colors">
+                      <input type="file" accept="image/*" className="hidden" id="thumbnail-upload" onChange={handleThumbnailUpload} disabled={isUploading} />
+                      <label htmlFor="thumbnail-upload" className="cursor-pointer w-full flex flex-col items-center">
+                        {isUploading ? <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-2" /> : <ImageIcon className="h-8 w-8 text-muted-foreground mb-2" />}
+                        <span className="text-sm font-medium">Click to upload thumbnail</span>
+                        <span className="text-xs text-muted-foreground mt-1">JPG, PNG up to 20MB</span>
+                      </label>
+                    </div>
                   ) : (
                     <div className="bg-muted p-4 rounded-lg flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -241,13 +241,13 @@ export default function UploadPage() {
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {PLATFORMS.map((platform) => (
-                  <div 
+                  <div
                     key={platform.id}
                     className={`flex items-start space-x-3 p-4 rounded-lg border cursor-pointer transition-colors ${selectedPlatforms.includes(platform.id) ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}
                     onClick={() => togglePlatform(platform.id)}
                   >
-                    <Checkbox 
-                      checked={selectedPlatforms.includes(platform.id)} 
+                    <Checkbox
+                      checked={selectedPlatforms.includes(platform.id)}
                       onCheckedChange={() => togglePlatform(platform.id)}
                     />
                     <div className="space-y-1 leading-none">
@@ -267,7 +267,7 @@ export default function UploadPage() {
               </CardHeader>
               <CardContent>
                 <Accordion className="w-full">
-                  
+
                   {selectedPlatforms.includes("youtube") && (
                     <AccordionItem value="youtube">
                       <AccordionTrigger className="hover:no-underline">
@@ -279,30 +279,30 @@ export default function UploadPage() {
                       <AccordionContent className="space-y-4 pt-4 px-1">
                         <div className="space-y-2">
                           <Label>Title</Label>
-                          <Input 
-                            placeholder="Enter video title" 
+                          <Input
+                            placeholder="Enter video title"
                             onChange={(e) => handlePlatformDataChange("youtube", "title", e.target.value)}
                           />
                         </div>
                         <div className="space-y-2">
                           <Label>Description</Label>
-                          <Textarea 
-                            placeholder="Enter video description" 
+                          <Textarea
+                            placeholder="Enter video description"
                             rows={4}
                             onChange={(e) => handlePlatformDataChange("youtube", "description", e.target.value)}
                           />
                         </div>
                         <div className="space-y-2">
                           <Label>Tags (comma separated)</Label>
-                          <Input 
-                            placeholder="tag1, tag2, tag3" 
+                          <Input
+                            placeholder="tag1, tag2, tag3"
                             onChange={(e) => handlePlatformDataChange("youtube", "tags", e.target.value)}
                           />
                         </div>
                         <div className="flex items-center space-x-2 pt-2">
-                          <Checkbox 
-                            id="yt-kids" 
-                            onCheckedChange={(c) => handlePlatformDataChange("youtube", "made_for_kids", c)} 
+                          <Checkbox
+                            id="yt-kids"
+                            onCheckedChange={(c) => handlePlatformDataChange("youtube", "made_for_kids", c)}
                           />
                           <Label htmlFor="yt-kids">Made for kids</Label>
                         </div>
@@ -321,16 +321,16 @@ export default function UploadPage() {
                       <AccordionContent className="space-y-4 pt-4 px-1">
                         <div className="space-y-2">
                           <Label>Caption</Label>
-                          <Textarea 
-                            placeholder="Write a caption..." 
+                          <Textarea
+                            placeholder="Write a caption..."
                             rows={4}
                             onChange={(e) => handlePlatformDataChange("instagram", "caption", e.target.value)}
                           />
                         </div>
                         <div className="space-y-2">
                           <Label>Location</Label>
-                          <Input 
-                            placeholder="e.g. New York, NY" 
+                          <Input
+                            placeholder="e.g. New York, NY"
                             onChange={(e) => handlePlatformDataChange("instagram", "location", e.target.value)}
                           />
                         </div>
@@ -350,8 +350,8 @@ export default function UploadPage() {
                       <AccordionContent className="space-y-4 pt-4 px-1">
                         <div className="space-y-2">
                           <Label>Caption</Label>
-                          <Textarea 
-                            placeholder="Write a caption..." 
+                          <Textarea
+                            placeholder="Write a caption..."
                             rows={4}
                             onChange={(e) => handlePlatformDataChange("tiktok", "caption", e.target.value)}
                           />
@@ -369,7 +369,7 @@ export default function UploadPage() {
                       </AccordionContent>
                     </AccordionItem>
                   )}
-                  
+
                   {selectedPlatforms.includes("x") && (
                     <AccordionItem value="x">
                       <AccordionTrigger className="hover:no-underline">
@@ -381,8 +381,8 @@ export default function UploadPage() {
                       <AccordionContent className="space-y-4 pt-4 px-1">
                         <div className="space-y-2">
                           <Label>Post Text</Label>
-                          <Textarea 
-                            placeholder="What's happening?" 
+                          <Textarea
+                            placeholder="What's happening?"
                             rows={4}
                             onChange={(e) => handlePlatformDataChange("x", "post_text", e.target.value)}
                           />

@@ -1,92 +1,137 @@
-"use client";
-
 import Link from "next/link";
-import { ArrowRight, Calendar, CheckCircle, Video } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { PublicNavbar } from "@/components/layout/PublicNavbar";
+import { PublicFooter } from "@/components/layout/PublicFooter";
 
-export default function LandingPage() {
-  return (
-    <div className="flex min-h-screen flex-col">
-      <header className="px-4 lg:px-6 h-16 flex items-center border-b bg-background">
-        <Link className="flex items-center justify-center gap-2" href="/">
-          <Video className="h-6 w-6 text-primary" />
-          <span className="font-bold text-xl">ClipScheduler</span>
-        </Link>
-        <nav className="ml-auto flex gap-4 sm:gap-6">
-          <Link className="text-sm font-medium hover:underline underline-offset-4" href="#features">
-            Features
-          </Link>
-          <Link className="text-sm font-medium hover:underline underline-offset-4" href="#pricing">
-            Pricing
-          </Link>
-          <Link className="text-sm font-medium hover:underline underline-offset-4" href="/login">
-            Login
-          </Link>
-        </nav>
-      </header>
-      <main className="flex-1">
-        <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48 bg-muted/40">
-          <div className="container px-4 md:px-6">
-            <div className="flex flex-col items-center space-y-4 text-center">
-              <div className="space-y-2 max-w-[800px]">
-                <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none">
-                  The Enterprise Video Scheduler
-                </h1>
-                <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl">
-                  Schedule, manage, and publish your short-form videos across YouTube, Instagram, TikTok, Facebook, Threads, and X from a single dashboard.
-                </p>
-              </div>
-              <div className="space-x-4">
-                <Link href="/register">
-                  <Button size="lg" className="h-12 px-8">
-                    Get Started <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
-                <Link href="/login">
-                  <Button variant="outline" size="lg" className="h-12 px-8">
-                    Sign In
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </div>
-        </section>
-        
-        <section id="features" className="w-full py-12 md:py-24 lg:py-32">
-          <div className="container px-4 md:px-6">
-            <div className="mx-auto grid max-w-5xl items-center gap-6 lg:grid-cols-3 lg:gap-12">
-              <div className="flex flex-col justify-center space-y-4 text-center border p-8 rounded-xl bg-card">
-                <Video className="mx-auto h-12 w-12 text-primary" />
-                <h3 className="text-xl font-bold">Write Once, Publish Anywhere</h3>
-                <p className="text-muted-foreground">Upload your video once and deploy it to all major platforms simultaneously with custom metadata for each.</p>
-              </div>
-              <div className="flex flex-col justify-center space-y-4 text-center border p-8 rounded-xl bg-card">
-                <Calendar className="mx-auto h-12 w-12 text-primary" />
-                <h3 className="text-xl font-bold">Smart Scheduling</h3>
-                <p className="text-muted-foreground">Plan your content calendar weeks in advance. Our resilient background workers ensure your posts go live precisely on time.</p>
-              </div>
-              <div className="flex flex-col justify-center space-y-4 text-center border p-8 rounded-xl bg-card">
-                <CheckCircle className="mx-auto h-12 w-12 text-primary" />
-                <h3 className="text-xl font-bold">Reliable Execution</h3>
-                <p className="text-muted-foreground">Built on FastAPI and PostgreSQL for enterprise-grade reliability, with automatic retries for failed API uploads.</p>
-              </div>
-            </div>
-          </div>
-        </section>
-      </main>
-      <footer className="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center px-4 md:px-6 border-t bg-background">
-        <p className="text-xs text-muted-foreground">
-          © 2026 ClipScheduler. All rights reserved.
-        </p>
-        <nav className="sm:ml-auto flex gap-4 sm:gap-6">
-          <Link className="text-xs hover:underline underline-offset-4" href="#">
-            Terms of Service
-          </Link>
-          <Link className="text-xs hover:underline underline-offset-4" href="#">
-            Privacy
-          </Link>
-        </nav>
-      </footer>
-    </div>
-  );
+export default function Home() {
+    return (
+        <div className="bg-background min-h-screen font-body-md text-on-background">
+
+            {/* TopAppBar */}
+            <PublicNavbar />
+            <main className="pt-32">
+                {/* Hero Section */}
+                <section className="max-w-container_max mx-auto px-clg pb-cxl text-center relative">
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -z-10 blur-[120px] opacity-20 bg-primary-container w-[600px] h-[400px] rounded-full"></div>
+                    <h1 className="font-display-lg text-display-lg max-w-4xl mx-auto mb-cmd leading-tight">
+                        The Operating System for <span className="text-primary">Video Growth</span>
+                    </h1>
+                    <p className="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto mb-clg">
+                        Scale your reach across every platform. Schedule, automate, and optimize your video content strategy from a single high-performance dashboard.
+                    </p>
+                    <div className="flex flex-col sm:flex-row justify-center items-center gap-cmd">
+                        <Link href="/register" className="flex items-center justify-center bg-primary-container text-on-primary-container px-clg py-cmd rounded-xl font-headline-md text-headline-md font-bold hover:shadow-[0_0_24px_rgba(79,70,229,0.3)] transition-all">
+                            Start Free Trial
+                        </Link>
+                        <button className="border border-outline text-on-surface px-clg py-cmd rounded-xl font-headline-md text-headline-md font-medium hover:bg-surface-variant transition-colors">
+                            View Demo
+                        </button>
+                    </div>
+                </section>
+                {/* Demo Section (Dashboard Preview) */}
+                <section className="max-w-container_max mx-auto px-clg pb-cxl">
+                    <div className="tonal-layer-1 rounded-xl p-base overflow-hidden shadow-2xl">
+                        <div className="bg-surface-container-high px-csm py-cxs border-b border-outline-variant flex items-center gap-cxs">
+                            <div className="flex gap-1.5">
+                                <div className="w-2.5 h-2.5 rounded-full bg-error"></div>
+                                <div className="w-2.5 h-2.5 rounded-full bg-tertiary"></div>
+                                <div className="w-2.5 h-2.5 rounded-full bg-secondary"></div>
+                            </div>
+                            <div className="bg-surface-container-low rounded px-cmd py-0.5 text-[10px] text-on-surface-variant flex-1 max-w-sm mx-auto text-center font-mono-sm">
+                                app.clipscheduler.com/dashboard
+                            </div>
+                        </div>
+                        <div className="aspect-video relative group">
+                            <img className="w-full h-full object-cover" data-alt="A sophisticated dark-mode enterprise software dashboard interface for video scheduling and management. The UI features a left sidebar with navigation icons, a central calendar grid filled with video thumbnail previews and engagement graphs, and a social media management panel on the right. The color palette is dominated by deep indigo and charcoal grays, with bright purple accents for active states and data visualizations. Professional, high-contrast, and data-rich aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBKzPCC0uX_r3Rhg25IWPNuENvTfCPvwbr6UcTIfEebeiMLE7cpIn1warMQJiLJI5GZwN78EykyJT5GC68vxQSoVDhy3uY5uJTHQGd07yutJkN0kmieQyuTA7wwUjiW9ophlK_GjtUhr325DKinWwaRkOwMMFFbYKV0l2KePMlmciWp99ycg_5o84QATZ9HW4e-y4dR3Mcv9KYdkhKuIzklDapyYDG01NTRtLXg4nTx8S5ndLcl8hWdo2drRbv_pqDjcmCg9Gu95EM" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-background/40 to-transparent pointer-events-none"></div>
+                        </div>
+                    </div>
+                </section>
+                {/* Trust Bar */}
+                <section className="bg-surface-container-low py-clg mb-cxl">
+                    <div className="max-w-container_max mx-auto px-clg flex flex-col md:flex-row items-center justify-between gap-clg">
+                        <p className="font-label-md text-label-md uppercase tracking-[0.2em] text-on-surface-variant font-bold">Trusted by brands on</p>
+                        <div className="flex flex-wrap justify-center gap-cxl opacity-60">
+                            <div className="flex items-center gap-cxs group">
+                                <span className="material-symbols-outlined text-secondary" style={{ fontVariationSettings: "'FILL' 1" }}>play_circle</span>
+                                <span className="font-bold text-on-surface">YouTube</span>
+                            </div>
+                            <div className="flex items-center gap-cxs group">
+                                <span className="material-symbols-outlined text-tertiary">camera</span>
+                                <span className="font-bold text-on-surface">Instagram</span>
+                            </div>
+                            <div className="flex items-center gap-cxs group">
+                                <span className="material-symbols-outlined text-primary">movie_edit</span>
+                                <span className="font-bold text-on-surface">TikTok</span>
+                            </div>
+                            <div className="flex items-center gap-cxs group">
+                                <span className="material-symbols-outlined text-secondary-container">face_nod</span>
+                                <span className="font-bold text-on-surface">Facebook</span>
+                            </div>
+                            <div className="flex items-center gap-cxs group">
+                                <span className="material-symbols-outlined text-on-surface">close</span>
+                                <span className="font-bold text-on-surface">X</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                {/* Features Section (Bento Grid Style) */}
+                <section className="max-w-container_max mx-auto px-clg pb-cxl">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+                        {/* Drag-and-Drop Feature */}
+                        <div className="tonal-layer-1 rounded-xl p-clg flex flex-col group indigo-glow transition-all">
+                            <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-cmd group-hover:scale-110 transition-transform">
+                                <span className="material-symbols-outlined text-primary text-3xl">upload_file</span>
+                            </div>
+                            <h3 className="font-headline-md text-headline-md mb-csm text-on-surface">Drag-and-Drop</h3>
+                            <p className="text-on-surface-variant font-body-sm text-body-sm leading-relaxed">
+                                Seamlessly upload and organize your entire content library. Our enterprise-grade asset manager handles 4K exports with zero latency.
+                            </p>
+                        </div>
+                        {/* AI Video Processing Feature */}
+                        <div className="tonal-layer-1 rounded-xl p-clg flex flex-col group indigo-glow transition-all">
+                            <div className="w-12 h-12 rounded-lg bg-secondary/10 flex items-center justify-center mb-cmd group-hover:scale-110 transition-transform">
+                                <span className="material-symbols-outlined text-secondary text-3xl">auto_fix_high</span>
+                            </div>
+                            <h3 className="font-headline-md text-headline-md mb-csm text-on-surface">AI Video Processing</h3>
+                            <p className="text-on-surface-variant font-body-sm text-body-sm leading-relaxed">
+                                Auto-optimize resolution, aspect ratios, and file formats for every social platform simultaneously using our proprietary AI engine.
+                            </p>
+                        </div>
+                        {/* Bulk Scheduling Feature */}
+                        <div className="tonal-layer-1 rounded-xl p-clg flex flex-col group indigo-glow transition-all">
+                            <div className="w-12 h-12 rounded-lg bg-tertiary/10 flex items-center justify-center mb-cmd group-hover:scale-110 transition-transform">
+                                <span className="material-symbols-outlined text-tertiary text-3xl">calendar_month</span>
+                            </div>
+                            <h3 className="font-headline-md text-headline-md mb-csm text-on-surface">Bulk Scheduling</h3>
+                            <p className="text-on-surface-variant font-body-sm text-body-sm leading-relaxed">
+                                Plan weeks of cross-platform content in minutes. Our intuitive visual calendar provides a birds-eye view of your entire growth strategy.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+                {/* Call to Action Splash */}
+                <section className="max-w-container_max mx-auto px-clg pb-cxl">
+                    <div className="relative rounded-xl overflow-hidden bg-primary-container p-cxl flex flex-col md:flex-row items-center justify-between">
+                        <div className="relative z-10 text-center md:text-left mb-clg md:mb-0">
+                            <h2 className="font-headline-lg text-headline-lg text-white mb-cxs">Ready to scale your video presence?</h2>
+                            <p className="text-on-primary-container font-body-md text-body-md opacity-90 max-w-md">Join 500+ enterprises automating their social growth with ClipScheduler.</p>
+                        </div>
+                        <div className="flex gap-cmd relative z-10">
+                            <Link href="/register" className="flex items-center justify-center bg-white text-primary-container px-clg py-cmd rounded-xl font-bold hover:bg-on-primary-container transition-colors shadow-lg">Get Started Now</Link>
+                        </div>
+                        {/* Abstract Background Detail */}
+                        <div className="absolute -right-20 -bottom-20 w-80 h-80 rounded-full bg-indigo-400 opacity-20 blur-3xl"></div>
+                        <div className="absolute top-0 left-1/2 w-full h-full -translate-x-1/2 pointer-events-none overflow-hidden opacity-10">
+                            <svg height="100%" preserveAspectRatio="none" viewBox="0 0 100 100" width="100%">
+                                <path d="M0 100 Q 25 0 50 100 T 100 100" fill="none" stroke="white" strokeWidth="0.5" />
+                            </svg>
+                        </div>
+                    </div>
+                </section>
+            </main>
+            {/* Footer */}
+            <PublicFooter />
+
+        </div>
+    );
 }

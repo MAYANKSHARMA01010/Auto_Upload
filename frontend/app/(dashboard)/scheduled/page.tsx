@@ -84,7 +84,7 @@ export default function ScheduledPostsPage() {
                       {post.platform}
                     </Badge>
                   </div>
-                  
+
                   <div className="flex flex-1 flex-col justify-between p-4 md:p-6">
                     <div className="flex justify-between items-start">
                       <div>
@@ -94,13 +94,13 @@ export default function ScheduledPostsPage() {
                         <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
                           <CalendarIcon className="h-4 w-4" />
                           <span>
-                            {post.schedule_datetime 
-                              ? format(new Date(post.schedule_datetime), "MMM d, yyyy 'at' h:mm a") 
+                            {post.schedule_datetime
+                              ? format(new Date(post.schedule_datetime), "MMM d, yyyy 'at' h:mm a")
                               : "No date set"}
                           </span>
                         </div>
                       </div>
-                      
+
                       <DropdownMenu>
                         <DropdownMenuTrigger className="inline-flex items-center justify-center rounded-md h-10 w-10 hover:bg-accent hover:text-accent-foreground">
                           <MoreVertical className="h-4 w-4" />

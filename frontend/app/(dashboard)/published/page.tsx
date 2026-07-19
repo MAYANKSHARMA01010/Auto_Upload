@@ -67,7 +67,7 @@ export default function PublishedPostsPage() {
                       {post.platform}
                     </Badge>
                   </div>
-                  
+
                   <div className="flex flex-1 flex-col justify-between p-4 md:p-6">
                     <div className="flex justify-between items-start">
                       <div>
@@ -77,13 +77,13 @@ export default function PublishedPostsPage() {
                         <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
                           <CheckCircle2 className="h-4 w-4 text-green-500" />
                           <span>
-                            Published {post.published_at 
-                              ? format(new Date(post.published_at), "MMM d, yyyy 'at' h:mm a") 
+                            Published {post.published_at
+                              ? format(new Date(post.published_at), "MMM d, yyyy 'at' h:mm a")
                               : "Unknown date"}
                           </span>
                         </div>
                       </div>
-                      
+
                       {post.platform_post_id && (
                         <Badge variant="secondary">
                           ID: {post.platform_post_id}

@@ -1,13 +1,18 @@
+import { PublicNavbar } from "@/components/layout/PublicNavbar";
+import { PublicFooter } from "@/components/layout/PublicFooter";
+
 export default function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4">
-      <div className="w-full max-w-md">
+    <div className="flex flex-col min-h-screen bg-background text-on-background font-body-md">
+      <PublicNavbar />
+      <main className="flex-grow flex flex-col pt-24">
         {children}
-      </div>
+      </main>
+      <PublicFooter />
     </div>
   );
 }

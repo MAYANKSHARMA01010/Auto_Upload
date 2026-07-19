@@ -21,8 +21,20 @@ export interface Video {
   created_at: string;
 }
 
-export type Platform = "youtube" | "instagram" | "facebook" | "tiktok" | "threads" | "x";
-export type PostStatus = "draft" | "scheduled" | "uploading" | "published" | "failed" | "cancelled";
+export type Platform =
+  | "youtube"
+  | "instagram"
+  | "facebook"
+  | "tiktok"
+  | "threads"
+  | "x";
+export type PostStatus =
+  | "draft"
+  | "scheduled"
+  | "uploading"
+  | "published"
+  | "failed"
+  | "cancelled";
 
 export interface ScheduledPost {
   id: string;

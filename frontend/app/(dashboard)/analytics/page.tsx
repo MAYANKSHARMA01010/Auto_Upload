@@ -66,7 +66,7 @@ export default function AnalyticsPage() {
             <CardDescription>Storage and bandwidth usage</CardDescription>
           </CardHeader>
           <CardContent>
-             <div className="flex h-[200px] items-center justify-center text-muted-foreground border border-dashed rounded-md">
+            <div className="flex h-[200px] items-center justify-center text-muted-foreground border border-dashed rounded-md">
               <div className="text-center">
                 <BarChart3 className="mx-auto h-8 w-8 mb-2 opacity-50" />
                 <p>Storage Metrics</p>
