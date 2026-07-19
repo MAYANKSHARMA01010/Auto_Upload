@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useAuthStore } from "@/stores/authStore";
+import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,8 +16,7 @@ const registerSchema = z.object({
 });
 
 export default function RegisterPage() {
-  const router = useRouter();
-  const setAuth = useAuthStore((state) => state.setAuth);
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -43,10 +41,8 @@ export default function RegisterPage() {
       });
 
       const { access_token, user } = loginRes.data;
-      setAuth(user, access_token);
-      
       toast.success("Account created successfully!");
-      router.push("/dashboard");
+      login(user, access_token);
     } catch (error: any) {
       toast.error(typeof error.response?.data?.detail === "string" ? error.response.data.detail : "Failed to create account");
     } finally {

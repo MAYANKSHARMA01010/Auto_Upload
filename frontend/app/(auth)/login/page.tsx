@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useAuthStore } from "@/stores/authStore";
+import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,8 +16,7 @@ const loginSchema = z.object({
 });
 
 export default function LoginPage() {
-  const router = useRouter();
-  const setAuth = useAuthStore((state) => state.setAuth);
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -36,9 +34,8 @@ export default function LoginPage() {
       });
 
       const { access_token, user } = response.data;
-      setAuth(user, access_token);
       toast.success("Successfully logged in!");
-      router.push("/dashboard");
+      login(user, access_token);
     } catch (error: any) {
       toast.error(typeof error.response?.data?.detail === "string" ? error.response.data.detail : "Invalid email or password");
     } finally {

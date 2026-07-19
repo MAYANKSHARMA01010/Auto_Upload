@@ -1,8 +1,5 @@
 "use client";
-
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useAuthStore } from "@/stores/authStore";
+import { useAuth } from "@/contexts/AuthContext";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 
@@ -11,16 +8,9 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { isAuthenticated, accessToken, _hasHydrated } = useAuthStore();
-  const router = useRouter();
+  const { isLogin, isLoading } = useAuth();
 
-  useEffect(() => {
-    if (_hasHydrated && (!isAuthenticated || !accessToken)) {
-      router.push("/login");
-    }
-  }, [_hasHydrated, isAuthenticated, accessToken, router]);
-
-  if (!_hasHydrated || !isAuthenticated) {
+  if (isLoading || !isLogin) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <span className="material-symbols-outlined animate-spin text-primary text-4xl">autorenew</span>
