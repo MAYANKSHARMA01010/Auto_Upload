@@ -45,11 +45,24 @@ def create_access_token(
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 
-import secrets
+def create_refresh_token(
+    subject: Any, expires_delta: Optional[timedelta] = None
+) -> str:
+    """Create a JWT refresh token."""
+    if expires_delta:
+        expire = datetime.now(timezone.utc) + expires_delta
+    else:
+        expire = datetime.now(timezone.utc) + timedelta(
+            days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS
+        )
 
-def create_refresh_token_string() -> str:
-    """Create a secure random string for refresh tokens."""
-    return secrets.token_urlsafe(64)
+    payload = {
+        "sub": str(subject),
+        "exp": expire,
+        "type": "refresh",
+        "iat": datetime.now(timezone.utc),
+    }
+    return jwt.encode(payload, settings.JWT_REFRESH_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 
 def create_password_reset_token(email: str) -> str:
@@ -69,8 +82,12 @@ def verify_token(token: str, token_type: str = "access") -> Optional[str]:
     Returns None if invalid.
     """
     try:
+        secret = settings.JWT_SECRET_KEY
+        if token_type == "refresh":
+            secret = settings.JWT_REFRESH_SECRET_KEY
+
         payload = jwt.decode(
-            token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
+            token, secret, algorithms=[settings.JWT_ALGORITHM]
         )
         if payload.get("type") != token_type:
             return None

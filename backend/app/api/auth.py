@@ -11,7 +11,7 @@ from app.core.dependencies import get_current_user, get_db
 from app.core.security import (
     create_access_token,
     create_password_reset_token,
-    create_refresh_token_string,
+    create_refresh_token,
     verify_token,
 )
 from sqlalchemy import select, delete
@@ -73,7 +73,7 @@ async def login(data: LoginRequest, response: Response, db: AsyncSession = Depen
             detail="Account is disabled",
         )
     
-    token_str = create_refresh_token_string()
+    token_str = create_refresh_token(user.id)
     
     expires_at = datetime.now(timezone.utc) + timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
     db_token = RefreshToken(user_id=user.id, token=token_str, expires_at=expires_at)
@@ -101,6 +101,12 @@ async def refresh_token(request: Request, response: Response, db: AsyncSession =
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token missing"
         )
         
+    user_id_from_token = verify_token(refresh_token_cookie, token_type="refresh")
+    if not user_id_from_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token signature"
+        )
+        
     stmt = select(RefreshToken).where(RefreshToken.token == refresh_token_cookie)
     result = await db.execute(stmt)
     db_token = result.scalar_one_or_none()
@@ -117,7 +123,7 @@ async def refresh_token(request: Request, response: Response, db: AsyncSession =
         )
         
     # Rotate token
-    new_token_str = create_refresh_token_string()
+    new_token_str = create_refresh_token(user.id)
     db_token.token = new_token_str
     db_token.expires_at = datetime.now(timezone.utc) + timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
     await db.commit()
