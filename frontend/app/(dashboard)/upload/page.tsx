@@ -266,7 +266,7 @@ export default function UploadPage() {
                 <CardDescription>Customize metadata for each platform</CardDescription>
               </CardHeader>
               <CardContent>
-                <Accordion type="multiple" className="w-full">
+                <Accordion className="w-full">
                   
                   {selectedPlatforms.includes("youtube") && (
                     <AccordionItem value="youtube">

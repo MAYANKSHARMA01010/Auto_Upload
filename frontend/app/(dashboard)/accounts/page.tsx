@@ -68,11 +68,9 @@ export default function AccountsPage() {
         </div>
         
         <Dialog>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Connect Platform
-            </Button>
+          <DialogTrigger render={<Button />}>
+            <Plus className="mr-2 h-4 w-4" />
+            Connect Platform
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>

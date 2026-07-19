@@ -28,7 +28,11 @@ async def lifespan(app: FastAPI):
 
     # Initialize database tables (dev only — use Alembic for production)
     if settings.ENVIRONMENT == "development":
-        await init_db()
+        try:
+            await init_db()
+        except Exception as e:
+            logger.warning(f"Could not connect to database or initialize tables: {e}")
+            logger.warning("Please ensure PostgreSQL is running or update DATABASE_URL in .env")
 
     # Start background scheduler
     start_scheduler()
