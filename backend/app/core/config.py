@@ -29,7 +29,7 @@ class Settings(BaseSettings):
         return [o.strip() for o in self.ALLOWED_ORIGINS.split(",")]
 
     # JWT
-    JWT_SECRET_KEY: str = "change-me-in-production"
+    JWT_ACCESS_SECRET_KEY: str = "change-me-in-production"
     JWT_REFRESH_SECRET_KEY: str = "change-me-in-production-too"
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30

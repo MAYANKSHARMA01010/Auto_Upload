@@ -42,7 +42,7 @@ def create_access_token(
         "type": "access",
         "iat": datetime.now(timezone.utc),
     }
-    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    return jwt.encode(payload, settings.JWT_ACCESS_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 
 def create_refresh_token(
@@ -73,7 +73,7 @@ def create_password_reset_token(email: str) -> str:
         "exp": expire,
         "type": "password_reset",
     }
-    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    return jwt.encode(payload, settings.JWT_ACCESS_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 
 def verify_token(token: str, token_type: str = "access") -> Optional[str]:
@@ -82,7 +82,7 @@ def verify_token(token: str, token_type: str = "access") -> Optional[str]:
     Returns None if invalid.
     """
     try:
-        secret = settings.JWT_SECRET_KEY
+        secret = settings.JWT_ACCESS_SECRET_KEY
         if token_type == "refresh":
             secret = settings.JWT_REFRESH_SECRET_KEY
 
