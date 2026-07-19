@@ -68,6 +68,13 @@ app.add_middleware(
 # Include all API routes
 app.include_router(api_router)
 
+from fastapi.responses import RedirectResponse
+
+@app.get("/", include_in_schema=False)
+async def root():
+    """Redirect root to API documentation."""
+    return RedirectResponse(url="/docs")
+
 
 @app.get("/health", tags=["Health"])
 async def health_check():

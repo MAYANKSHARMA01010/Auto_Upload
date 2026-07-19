@@ -41,7 +41,7 @@ export default function Home() {
                             </div>
                         </div>
                         <div className="aspect-video relative group">
-                            <img className="w-full h-full object-cover" data-alt="A sophisticated dark-mode enterprise software dashboard interface for video scheduling and management. The UI features a left sidebar with navigation icons, a central calendar grid filled with video thumbnail previews and engagement graphs, and a social media management panel on the right. The color palette is dominated by deep indigo and charcoal grays, with bright purple accents for active states and data visualizations. Professional, high-contrast, and data-rich aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBKzPCC0uX_r3Rhg25IWPNuENvTfCPvwbr6UcTIfEebeiMLE7cpIn1warMQJiLJI5GZwN78EykyJT5GC68vxQSoVDhy3uY5uJTHQGd07yutJkN0kmieQyuTA7wwUjiW9ophlK_GjtUhr325DKinWwaRkOwMMFFbYKV0l2KePMlmciWp99ycg_5o84QATZ9HW4e-y4dR3Mcv9KYdkhKuIzklDapyYDG01NTRtLXg4nTx8S5ndLcl8hWdo2drRbv_pqDjcmCg9Gu95EM" />
+                            <img className="w-full h-full object-cover" alt="Dashboard Preview" src="/home.png" />
                             <div className="absolute inset-0 bg-gradient-to-t from-background/40 to-transparent pointer-events-none"></div>
                         </div>
                     </div>
