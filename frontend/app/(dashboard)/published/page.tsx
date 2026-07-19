@@ -3,41 +3,25 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon, Clock, MoreVertical, Play, XCircle } from "lucide-react";
+import { CheckCircle2, Clock, Play } from "lucide-react";
 
 import { api } from "@/lib/axios";
 import { ScheduledPost } from "@/types";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export default function ScheduledPostsPage() {
+export default function PublishedPostsPage() {
   const [page, setPage] = useState(1);
   const perPage = 20;
 
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ["schedules", page],
+  const { data, isLoading } = useQuery({
+    queryKey: ["schedules", page, "published"],
     queryFn: async () => {
-      const res = await api.get(`/schedules?page=${page}&per_page=${perPage}&status=scheduled`);
+      const res = await api.get(`/schedules?page=${page}&per_page=${perPage}&status=published`);
       return res.data;
     },
   });
-
-  const handleCancel = async (id: string) => {
-    try {
-      await api.delete(`/schedules/${id}`);
-      refetch();
-    } catch (error) {
-      console.error(error);
-    }
-  };
 
   const getPlatformColor = (platform: string) => {
     const colors: Record<string, string> = {
@@ -54,7 +38,7 @@ export default function ScheduledPostsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight">Scheduled Posts</h2>
+        <h2 className="text-3xl font-bold tracking-tight">Published Posts</h2>
       </div>
 
       {isLoading ? (
@@ -65,10 +49,10 @@ export default function ScheduledPostsPage() {
         </div>
       ) : data?.schedules.length === 0 ? (
         <div className="flex h-[400px] flex-col items-center justify-center rounded-md border border-dashed text-center">
-          <Clock className="mx-auto h-12 w-12 text-muted-foreground/50" />
-          <h3 className="mt-4 text-lg font-semibold">No scheduled posts</h3>
+          <CheckCircle2 className="mx-auto h-12 w-12 text-muted-foreground/50" />
+          <h3 className="mt-4 text-lg font-semibold">No published posts yet</h3>
           <p className="mb-4 text-sm text-muted-foreground">
-            You don't have any posts scheduled for the future.
+            Once your scheduled posts are successfully uploaded, they will appear here.
           </p>
         </div>
       ) : (
@@ -77,7 +61,6 @@ export default function ScheduledPostsPage() {
             <Card key={post.id} className="overflow-hidden">
               <CardContent className="p-0">
                 <div className="flex flex-col md:flex-row">
-                  {/* Mock video thumbnail area */}
                   <div className="h-40 md:h-32 md:w-48 bg-muted relative flex items-center justify-center shrink-0">
                     <Play className="h-8 w-8 text-muted-foreground/50" />
                     <Badge className={`absolute top-2 left-2 ${getPlatformColor(post.platform)}`} variant="outline">
@@ -92,26 +75,20 @@ export default function ScheduledPostsPage() {
                           {post.title || post.caption || post.post_text || "Untitled Post"}
                         </h3>
                         <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                          <CalendarIcon className="h-4 w-4" />
+                          <CheckCircle2 className="h-4 w-4 text-green-500" />
                           <span>
-                            {post.schedule_datetime 
-                              ? format(new Date(post.schedule_datetime), "MMM d, yyyy 'at' h:mm a") 
-                              : "No date set"}
+                            Published {post.published_at 
+                              ? format(new Date(post.published_at), "MMM d, yyyy 'at' h:mm a") 
+                              : "Unknown date"}
                           </span>
                         </div>
                       </div>
                       
-                      <DropdownMenu>
-                        <DropdownMenuTrigger className="inline-flex items-center justify-center rounded-md h-10 w-10 hover:bg-accent hover:text-accent-foreground">
-                          <MoreVertical className="h-4 w-4" />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem className="text-destructive" onClick={() => handleCancel(post.id)}>
-                            <XCircle className="mr-2 h-4 w-4" />
-                            Cancel Schedule
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      {post.platform_post_id && (
+                        <Badge variant="secondary">
+                          ID: {post.platform_post_id}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </div>

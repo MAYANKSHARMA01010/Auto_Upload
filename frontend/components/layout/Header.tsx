@@ -35,14 +35,12 @@ export function Header() {
         {/* Can add global search here if needed */}
       </div>
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="rounded-full">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={user?.avatar_url || ""} alt={user?.name || "User"} />
-              <AvatarFallback>{getInitials(user?.name)}</AvatarFallback>
-            </Avatar>
-            <span className="sr-only">Toggle user menu</span>
-          </Button>
+        <DropdownMenuTrigger className="inline-flex items-center justify-center rounded-full h-10 w-10 hover:bg-accent hover:text-accent-foreground">
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={user?.avatar_url || ""} alt={user?.name || "User"} />
+            <AvatarFallback>{getInitials(user?.name)}</AvatarFallback>
+          </Avatar>
+          <span className="sr-only">Toggle user menu</span>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>

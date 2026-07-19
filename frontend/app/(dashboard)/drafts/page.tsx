@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon, Clock, MoreVertical, Play, XCircle } from "lucide-react";
+import { Clock, Edit, FileEdit, MoreVertical, Play, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import { api } from "@/lib/axios";
 import { ScheduledPost } from "@/types";
@@ -18,19 +19,20 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export default function ScheduledPostsPage() {
+export default function DraftPostsPage() {
+  const router = useRouter();
   const [page, setPage] = useState(1);
   const perPage = 20;
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["schedules", page],
+    queryKey: ["schedules", page, "draft"],
     queryFn: async () => {
-      const res = await api.get(`/schedules?page=${page}&per_page=${perPage}&status=scheduled`);
+      const res = await api.get(`/schedules?page=${page}&per_page=${perPage}&status=draft`);
       return res.data;
     },
   });
 
-  const handleCancel = async (id: string) => {
+  const handleDelete = async (id: string) => {
     try {
       await api.delete(`/schedules/${id}`);
       refetch();
@@ -54,7 +56,7 @@ export default function ScheduledPostsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold tracking-tight">Scheduled Posts</h2>
+        <h2 className="text-3xl font-bold tracking-tight">Drafts</h2>
       </div>
 
       {isLoading ? (
@@ -65,10 +67,10 @@ export default function ScheduledPostsPage() {
         </div>
       ) : data?.schedules.length === 0 ? (
         <div className="flex h-[400px] flex-col items-center justify-center rounded-md border border-dashed text-center">
-          <Clock className="mx-auto h-12 w-12 text-muted-foreground/50" />
-          <h3 className="mt-4 text-lg font-semibold">No scheduled posts</h3>
+          <FileEdit className="mx-auto h-12 w-12 text-muted-foreground/50" />
+          <h3 className="mt-4 text-lg font-semibold">No drafts found</h3>
           <p className="mb-4 text-sm text-muted-foreground">
-            You don't have any posts scheduled for the future.
+            Saved drafts will appear here for you to edit and schedule later.
           </p>
         </div>
       ) : (
@@ -77,7 +79,6 @@ export default function ScheduledPostsPage() {
             <Card key={post.id} className="overflow-hidden">
               <CardContent className="p-0">
                 <div className="flex flex-col md:flex-row">
-                  {/* Mock video thumbnail area */}
                   <div className="h-40 md:h-32 md:w-48 bg-muted relative flex items-center justify-center shrink-0">
                     <Play className="h-8 w-8 text-muted-foreground/50" />
                     <Badge className={`absolute top-2 left-2 ${getPlatformColor(post.platform)}`} variant="outline">
@@ -89,14 +90,12 @@ export default function ScheduledPostsPage() {
                     <div className="flex justify-between items-start">
                       <div>
                         <h3 className="font-semibold text-lg line-clamp-1">
-                          {post.title || post.caption || post.post_text || "Untitled Post"}
+                          {post.title || post.caption || post.post_text || "Untitled Draft"}
                         </h3>
                         <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                          <CalendarIcon className="h-4 w-4" />
+                          <Clock className="h-4 w-4" />
                           <span>
-                            {post.schedule_datetime 
-                              ? format(new Date(post.schedule_datetime), "MMM d, yyyy 'at' h:mm a") 
-                              : "No date set"}
+                            Last updated {format(new Date(post.updated_at), "MMM d, yyyy 'at' h:mm a")}
                           </span>
                         </div>
                       </div>
@@ -106,9 +105,13 @@ export default function ScheduledPostsPage() {
                           <MoreVertical className="h-4 w-4" />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem className="text-destructive" onClick={() => handleCancel(post.id)}>
-                            <XCircle className="mr-2 h-4 w-4" />
-                            Cancel Schedule
+                          <DropdownMenuItem onClick={() => router.push(`/upload?draft=${post.id}`)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit & Schedule
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(post.id)}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete Draft
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
