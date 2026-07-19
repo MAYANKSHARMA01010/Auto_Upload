@@ -81,14 +81,14 @@ export default function AccountsPage() {
             </DialogHeader>
             <div className="grid grid-cols-2 gap-4 py-4">
               {PLATFORMS.map((platform) => {
-                const isAlreadyConnected = accounts?.some(a => a.platform === platform.id);
+                const connectionCount = accounts?.filter(a => a.platform === platform.id).length || 0;
                 return (
                   <Button
                     key={platform.id}
                     variant="outline"
-                    className="h-24 flex flex-col items-center justify-center gap-2"
+                    className="h-24 flex flex-col items-center justify-center gap-2 relative"
                     onClick={() => handleConnect(platform.id)}
-                    disabled={isAlreadyConnected || isConnecting === platform.id}
+                    disabled={isConnecting === platform.id}
                   >
                     {isConnecting === platform.id ? (
                       <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -96,8 +96,8 @@ export default function AccountsPage() {
                       <span className={`h-3 w-3 rounded-full ${platform.color}`} />
                     )}
                     <span className="font-medium">{platform.name}</span>
-                    {isAlreadyConnected && (
-                      <span className="text-xs text-muted-foreground">Connected</span>
+                    {connectionCount > 0 && (
+                      <span className="text-xs text-muted-foreground">{connectionCount} Connected</span>
                     )}
                   </Button>
                 );

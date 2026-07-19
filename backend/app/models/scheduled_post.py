@@ -108,9 +108,15 @@ class ScheduledPost(Base, TimestampMixin):
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     retry_count: Mapped[int] = mapped_column(default=0, nullable=False)
 
+    # Publishing Target
+    connected_account_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("connected_accounts.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+
     # Relationships
     user = relationship("User", back_populates="scheduled_posts")
     video = relationship("Video", back_populates="scheduled_posts")
+    connected_account = relationship("ConnectedAccount", back_populates="scheduled_posts")
 
     def __repr__(self) -> str:
         return f"<ScheduledPost id={self.id} platform={self.platform} status={self.status}>"

@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { UploadCloud, Image as ImageIcon, CalendarIcon, Loader2, CheckCircle2 } from "lucide-react";
 
 import { api } from "@/lib/axios";
+import { ConnectedAccount } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -46,7 +48,15 @@ export default function UploadPage() {
   const [scheduleDate, setScheduleDate] = useState<string>("");
   const [scheduleTime, setScheduleTime] = useState<string>("");
 
-  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
+  const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
+
+  const { data: accounts } = useQuery<ConnectedAccount[]>({
+    queryKey: ["accounts"],
+    queryFn: async () => {
+      const res = await api.get("/accounts");
+      return res.data;
+    },
+  });
 
   // Platform specific forms state
   const [platformData, setPlatformData] = useState<Record<string, any>>({});
@@ -96,9 +106,9 @@ export default function UploadPage() {
     }
   };
 
-  const togglePlatform = (platformId: string) => {
-    setSelectedPlatforms(prev =>
-      prev.includes(platformId) ? prev.filter(p => p !== platformId) : [...prev, platformId]
+  const toggleAccount = (accountId: string) => {
+    setSelectedAccounts(prev =>
+      prev.includes(accountId) ? prev.filter(id => id !== accountId) : [...prev, accountId]
     );
   };
 
@@ -114,7 +124,7 @@ export default function UploadPage() {
 
   const handleSave = async (status: "draft" | "scheduled") => {
     if (!videoId) return toast.error("Please upload a video first");
-    if (selectedPlatforms.length === 0) return toast.error("Select at least one platform");
+    if (selectedAccounts.length === 0) return toast.error("Select at least one account");
 
     if (status === "scheduled" && (!scheduleDate || !scheduleTime)) {
       return toast.error("Please select schedule date and time");
@@ -129,11 +139,15 @@ export default function UploadPage() {
         schedule_datetime = new Date(`${scheduleDate}T${scheduleTime}`).toISOString();
       }
 
-      const posts = selectedPlatforms.map(platform => ({
-        platform,
-        status,
-        ...(platformData[platform] || {})
-      }));
+      const posts = selectedAccounts.map(accountId => {
+        const acc = accounts?.find(a => a.id === accountId);
+        return {
+          platform: acc?.platform,
+          connected_account_id: accountId,
+          status,
+          ...(platformData[acc?.platform || ""] || {})
+        };
+      });
 
       await api.post("/schedules/bulk", {
         video_id: videoId,
@@ -240,26 +254,37 @@ export default function UploadPage() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {PLATFORMS.map((platform) => (
-                  <div
-                    key={platform.id}
-                    className={`flex items-start space-x-3 p-4 rounded-lg border cursor-pointer transition-colors ${selectedPlatforms.includes(platform.id) ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}
-                    onClick={() => togglePlatform(platform.id)}
-                  >
-                    <Checkbox
-                      checked={selectedPlatforms.includes(platform.id)}
-                      onCheckedChange={() => togglePlatform(platform.id)}
-                    />
-                    <div className="space-y-1 leading-none">
-                      <Label className="cursor-pointer">{platform.label}</Label>
+                {accounts?.map((account) => {
+                  const plat = PLATFORMS.find(p => p.id === account.platform);
+                  const color = plat?.color || "bg-gray-100 text-gray-900";
+                  const label = plat?.label || account.platform;
+                  return (
+                    <div
+                      key={account.id}
+                      className={`flex items-start space-x-3 p-4 rounded-lg border cursor-pointer transition-colors ${selectedAccounts.includes(account.id) ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}
+                      onClick={() => toggleAccount(account.id)}
+                    >
+                      <Checkbox
+                        checked={selectedAccounts.includes(account.id)}
+                        onCheckedChange={() => toggleAccount(account.id)}
+                      />
+                      <div className="space-y-1 leading-none">
+                        <Label className="cursor-pointer">{label}</Label>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {account.username ? `@${account.username}` : "Connected"}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
+                {accounts?.length === 0 && (
+                  <p className="text-sm text-muted-foreground col-span-full">No connected accounts. Please connect an account in the Accounts tab.</p>
+                )}
               </div>
             </CardContent>
           </Card>
 
-          {selectedPlatforms.length > 0 && (
+          {selectedAccounts.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle>4. Platform Details</CardTitle>
@@ -267,8 +292,11 @@ export default function UploadPage() {
               </CardHeader>
               <CardContent>
                 <Accordion className="w-full">
-
-                  {selectedPlatforms.includes("youtube") && (
+                  {(() => {
+                    const activePlatforms = [...new Set(selectedAccounts.map(id => accounts?.find(a => a.id === id)?.platform).filter(Boolean))];
+                    return (
+                      <>
+                  {activePlatforms.includes("youtube") && (
                     <AccordionItem value="youtube">
                       <AccordionTrigger className="hover:no-underline">
                         <div className="flex items-center gap-2">
@@ -310,7 +338,7 @@ export default function UploadPage() {
                     </AccordionItem>
                   )}
 
-                  {selectedPlatforms.includes("instagram") && (
+                  {activePlatforms.includes("instagram") && (
                     <AccordionItem value="instagram">
                       <AccordionTrigger className="hover:no-underline">
                         <div className="flex items-center gap-2">
@@ -339,7 +367,7 @@ export default function UploadPage() {
                   )}
 
                   {/* Add similar accordion items for Facebook, TikTok, Threads, X */}
-                  {selectedPlatforms.includes("tiktok") && (
+                  {activePlatforms.includes("tiktok") && (
                     <AccordionItem value="tiktok">
                       <AccordionTrigger className="hover:no-underline">
                         <div className="flex items-center gap-2">
@@ -370,7 +398,7 @@ export default function UploadPage() {
                     </AccordionItem>
                   )}
 
-                  {selectedPlatforms.includes("x") && (
+                  {activePlatforms.includes("x") && (
                     <AccordionItem value="x">
                       <AccordionTrigger className="hover:no-underline">
                         <div className="flex items-center gap-2">
@@ -390,7 +418,9 @@ export default function UploadPage() {
                       </AccordionContent>
                     </AccordionItem>
                   )}
-
+                      </>
+                    );
+                  })()}
                 </Accordion>
               </CardContent>
               <CardFooter className="flex justify-end gap-4 border-t pt-6 mt-4">

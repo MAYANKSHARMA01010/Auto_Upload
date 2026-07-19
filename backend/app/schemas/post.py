@@ -16,6 +16,7 @@ from app.models.scheduled_post import Platform, PostStatus
 class ScheduledPostCreate(BaseModel):
     video_id: uuid.UUID
     platform: Platform
+    connected_account_id: Optional[uuid.UUID] = None
     status: PostStatus = PostStatus.DRAFT
 
     # Schedule
@@ -73,6 +74,7 @@ class ScheduledPostResponse(BaseModel):
     user_id: uuid.UUID
     video_id: uuid.UUID
     platform: Platform
+    connected_account_id: Optional[uuid.UUID] = None
     status: PostStatus
     schedule_datetime: Optional[datetime] = None
     timezone: str

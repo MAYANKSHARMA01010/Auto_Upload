@@ -38,6 +38,7 @@ class ConnectedAccount(Base, TimestampMixin):
 
     # Relationship
     user = relationship("User", back_populates="connected_accounts")
+    scheduled_posts = relationship("ScheduledPost", back_populates="connected_account", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return f"<ConnectedAccount id={self.id} platform={self.platform} user={self.user_id}>"
