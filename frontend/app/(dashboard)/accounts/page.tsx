@@ -13,13 +13,15 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
+import { FaYoutube, FaInstagram, FaFacebook, FaTiktok, FaThreads, FaXTwitter } from "react-icons/fa6";
+
 const PLATFORMS = [
-  { id: "youtube", name: "YouTube Shorts", color: "bg-red-500", textColor: "text-red-500" },
-  { id: "instagram", name: "Instagram", color: "bg-pink-500", textColor: "text-pink-500" },
-  { id: "facebook", name: "Facebook Page", color: "bg-blue-500", textColor: "text-blue-500" },
-  { id: "tiktok", name: "TikTok", color: "bg-neutral-900 dark:bg-neutral-100", textColor: "text-neutral-900 dark:text-neutral-100" },
-  { id: "threads", name: "Threads", color: "bg-neutral-800", textColor: "text-neutral-800" },
-  { id: "x", name: "X (Twitter)", color: "bg-blue-400", textColor: "text-blue-400" },
+  { id: "youtube", name: "YouTube Shorts", color: "bg-red-500", textColor: "text-red-500", icon: FaYoutube },
+  { id: "instagram", name: "Instagram", color: "bg-pink-500", textColor: "text-pink-500", icon: FaInstagram },
+  { id: "facebook", name: "Facebook Page", color: "bg-blue-500", textColor: "text-blue-500", icon: FaFacebook },
+  { id: "tiktok", name: "TikTok", color: "bg-neutral-900 dark:bg-neutral-100", textColor: "text-neutral-900 dark:text-neutral-100", icon: FaTiktok },
+  { id: "threads", name: "Threads", color: "bg-neutral-800 dark:bg-neutral-200", textColor: "text-neutral-800 dark:text-neutral-200", icon: FaThreads },
+  { id: "x", name: "X (Twitter)", color: "bg-neutral-900 dark:bg-neutral-100", textColor: "text-neutral-900 dark:text-neutral-100", icon: FaXTwitter },
 ];
 
 export default function AccountsPage() {
@@ -56,7 +58,7 @@ export default function AccountsPage() {
   };
 
   const getPlatformDetails = (platformId: string) => {
-    return PLATFORMS.find(p => p.id === platformId) || { name: platformId, color: "bg-gray-500", textColor: "text-gray-500" };
+    return PLATFORMS.find(p => p.id === platformId) || { name: platformId, color: "bg-gray-500", textColor: "text-gray-500", icon: LinkIcon };
   };
 
   return (
@@ -91,9 +93,9 @@ export default function AccountsPage() {
                     disabled={isConnecting === platform.id}
                   >
                     {isConnecting === platform.id ? (
-                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                     ) : (
-                      <span className={`h-3 w-3 rounded-full ${platform.color}`} />
+                      <platform.icon className={`h-8 w-8 ${platform.textColor}`} />
                     )}
                     <span className="font-medium">{platform.name}</span>
                     {connectionCount > 0 && (
@@ -146,7 +148,8 @@ export default function AccountsPage() {
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                  <CardTitle className={`text-xl mt-2 ${platform.textColor}`}>
+                  <CardTitle className={`text-xl mt-2 flex items-center gap-2 ${platform.textColor}`}>
+                    <platform.icon className="h-5 w-5" />
                     {platform.name}
                   </CardTitle>
                   <CardDescription>
