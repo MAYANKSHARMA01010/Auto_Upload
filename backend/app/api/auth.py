@@ -11,9 +11,12 @@ from app.core.dependencies import get_current_user, get_db
 from app.core.security import (
     create_access_token,
     create_password_reset_token,
-    create_refresh_token,
+    create_refresh_token_string,
     verify_token,
 )
+from sqlalchemy import select, delete
+from datetime import datetime, timezone, timedelta
+from app.models.refresh_token import RefreshToken
 from app.models.activity_log import ActivityAction
 from app.models.user import User
 from app.schemas.auth import (
@@ -70,10 +73,16 @@ async def login(data: LoginRequest, response: Response, db: AsyncSession = Depen
             detail="Account is disabled",
         )
     
-    refresh_token = create_refresh_token(user.id)
+    token_str = create_refresh_token_string()
+    
+    expires_at = datetime.now(timezone.utc) + timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
+    db_token = RefreshToken(user_id=user.id, token=token_str, expires_at=expires_at)
+    db.add(db_token)
+    await db.commit()
+    
     response.set_cookie(
         key="refresh_token",
-        value=refresh_token,
+        value=token_str,
         httponly=True,
         secure=(settings.ENVIRONMENT != "development"),
         samesite="lax",
@@ -92,22 +101,30 @@ async def refresh_token(request: Request, response: Response, db: AsyncSession =
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token missing"
         )
         
-    user_id = verify_token(refresh_token_cookie, token_type="refresh")
-    if not user_id:
+    stmt = select(RefreshToken).where(RefreshToken.token == refresh_token_cookie)
+    result = await db.execute(stmt)
+    db_token = result.scalar_one_or_none()
+        
+    if not db_token or db_token.expires_at < datetime.now(timezone.utc):
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
-        )
-    import uuid
-    user = await UserService.get_by_id(db, uuid.UUID(user_id))
-    if not user or not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired refresh token"
         )
         
-    new_refresh_token = create_refresh_token(user.id)
+    user = await UserService.get_by_id(db, db_token.user_id)
+    if not user or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or disabled"
+        )
+        
+    # Rotate token
+    new_token_str = create_refresh_token_string()
+    db_token.token = new_token_str
+    db_token.expires_at = datetime.now(timezone.utc) + timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
+    await db.commit()
+    
     response.set_cookie(
         key="refresh_token",
-        value=new_refresh_token,
+        value=new_token_str,
         httponly=True,
         secure=(settings.ENVIRONMENT != "development"),
         samesite="lax",
@@ -117,8 +134,13 @@ async def refresh_token(request: Request, response: Response, db: AsyncSession =
     return TokenResponse(access_token=create_access_token(user.id))
 
 @router.post("/logout", response_model=MessageResponse)
-async def logout(response: Response):
-    """Log out by clearing the refresh token cookie."""
+async def logout(request: Request, response: Response, db: AsyncSession = Depends(get_db)):
+    """Log out by clearing the refresh token cookie and removing it from the database."""
+    refresh_token_cookie = request.cookies.get("refresh_token")
+    if refresh_token_cookie:
+        stmt = delete(RefreshToken).where(RefreshToken.token == refresh_token_cookie)
+        await db.execute(stmt)
+        await db.commit()
     response.delete_cookie(
         key="refresh_token",
         httponly=True,

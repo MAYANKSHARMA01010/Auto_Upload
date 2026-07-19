@@ -1,16 +1,17 @@
 import asyncio
-from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 from app.core.config import settings
+from app.database.base import Base
+from app.models.refresh_token import RefreshToken # Ensure it's imported
 
 async def alter_db():
     engine = create_async_engine(str(settings.DATABASE_URL))
     async with engine.begin() as conn:
         try:
-            await conn.execute(text("ALTER TABLE scheduled_posts ADD COLUMN connected_account_id UUID REFERENCES connected_accounts(id) ON DELETE CASCADE;"))
-            print("Successfully added column")
+            await conn.run_sync(Base.metadata.create_all)
+            print("Successfully created tables (including refresh_tokens)")
         except Exception as e:
-            print(f"Error (might already exist): {e}")
+            print(f"Error: {e}")
     await engine.dispose()
 
 if __name__ == "__main__":

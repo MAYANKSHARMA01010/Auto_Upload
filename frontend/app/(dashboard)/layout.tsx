@@ -11,18 +11,16 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { isAuthenticated, accessToken } = useAuthStore();
+  const { isAuthenticated, accessToken, _hasHydrated } = useAuthStore();
   const router = useRouter();
-  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
-    if (!isAuthenticated || !accessToken) {
+    if (_hasHydrated && (!isAuthenticated || !accessToken)) {
       router.push("/login");
     }
-  }, [isAuthenticated, accessToken, router]);
+  }, [_hasHydrated, isAuthenticated, accessToken, router]);
 
-  if (!isMounted || !isAuthenticated) {
+  if (!_hasHydrated || !isAuthenticated) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <span className="material-symbols-outlined animate-spin text-primary text-4xl">autorenew</span>

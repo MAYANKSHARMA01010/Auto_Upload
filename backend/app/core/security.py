@@ -45,18 +45,11 @@ def create_access_token(
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 
-def create_refresh_token(subject: Any) -> str:
-    """Create a JWT refresh token."""
-    expire = datetime.now(timezone.utc) + timedelta(
-        days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS
-    )
-    payload = {
-        "sub": str(subject),
-        "exp": expire,
-        "type": "refresh",
-        "iat": datetime.now(timezone.utc),
-    }
-    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+import secrets
+
+def create_refresh_token_string() -> str:
+    """Create a secure random string for refresh tokens."""
+    return secrets.token_urlsafe(64)
 
 
 def create_password_reset_token(email: str) -> str:
