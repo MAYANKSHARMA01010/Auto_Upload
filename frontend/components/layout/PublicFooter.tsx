@@ -3,10 +3,13 @@ export function PublicFooter() {
         <footer className="bg-surface-container border-t border-outline-variant w-full mt-auto">
             <div className="max-w-container_max mx-auto px-clg py-cxl grid grid-cols-2 md:grid-cols-4 gap-gutter">
                 <div className="col-span-2 md:col-span-1">
-                    <div className="flex items-center gap-cxs mb-cmd">
-                        <img alt="ClipScheduler Logo" className="h-6 w-6 object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAu1sOlfOcGGQkzzvvwJdTLEFrgXzrI1XtNZHHQIvWtjboYCamJ8jdBR773F-PAcu75XqqKccY5JgRM8nMwOuWcRiQ4NPUX5d8gNbKiYJvyy_CWNGYf9qEDe4jepmntAGLnXDhSZ9VHYbjnAsxOh9Tmi2gjtjjsNpY9K8Q42Nvp9njqrpCDkvqsHlsAwQowLYawxxfET8alwvceAIDFLo26i8ba-RrnnH74wD3kjbzNCJ-9fAUN0opKZ4D7TMx8KqTWmnVkoIhcMV4" />
-                        <span className="text-headline-sm font-headline-sm font-bold text-on-surface tracking-tight">ClipScheduler</span>
-                    </div>
+                    <a href="/" className="flex items-center mb-cmd">
+                        <img 
+                            alt="ClipScheduler Logo" 
+                            className="h-8 w-auto object-contain opacity-70 hover:opacity-100 transition-opacity" 
+                            src="/logo.png" 
+                        />
+                    </a>
                     <p className="text-on-surface-variant font-body-sm text-body-sm mb-clg max-w-xs">
                         The professional choice for cross-platform video automation and scheduling. Built for creators, designed for growth.
                     </p>

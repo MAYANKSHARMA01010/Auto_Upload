@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/authStore";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: "dashboard" },
@@ -16,12 +17,19 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
+  const { logout } = useAuth();
 
   return (
     <aside className="w-64 flex-shrink-0 bg-surface-container-lowest border-r border-outline-variant h-full flex flex-col z-40 hidden md:flex">
       <div className="p-cmd flex items-center gap-csm">
-        <span className="font-headline-md text-headline-md text-primary tracking-tight">ClipScheduler</span>
+        <Link href="/">
+          <img 
+            alt="ClipScheduler Logo" 
+            className="h-10 w-auto object-contain" 
+            src="/logo.png" 
+          />
+        </Link>
       </div>
       <nav className="flex-1 px-csm mt-cmd space-y-1">
         {navItems.map((item) => {
