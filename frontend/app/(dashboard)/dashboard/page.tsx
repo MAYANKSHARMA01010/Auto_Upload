@@ -19,6 +19,18 @@ const PlatformIcon = ({ platform, className = "" }: { platform: string, classNam
   }
 };
 
+const getBrandColor = (platform: string) => {
+  switch (platform.toUpperCase()) {
+    case "YOUTUBE": return "text-[#FF0000]";
+    case "INSTAGRAM": return "text-[#E1306C]";
+    case "FACEBOOK": return "text-[#1877F2]";
+    case "TIKTOK": return "text-white";
+    case "THREADS": return "text-white";
+    case "X": return "text-white";
+    default: return "text-primary";
+  }
+};
+
 interface OverallStats {
   total_videos: number;
   total_posts: number;
@@ -141,8 +153,8 @@ export default function DashboardPage() {
                   {allPlatforms.map((platform) => {
                     const count = platformAccounts[platform] || platformAccounts[platform.toLowerCase()] || 0;
                     return (
-                      <div key={platform} className={`rounded-lg p-csm flex flex-col items-center justify-center text-center transition-colors ${count > 0 ? 'bg-primary-container/20 border border-primary/30' : 'bg-surface-container-high border border-transparent'}`}>
-                        <PlatformIcon platform={platform} className={`text-2xl mb-2 ${count > 0 ? 'text-primary' : 'text-on-surface-variant'}`} />
+                      <div key={platform} className={`rounded-lg p-csm flex flex-col items-center justify-center text-center transition-colors ${count > 0 ? 'bg-primary-container/10 border border-primary/20' : 'bg-surface-container-high border border-transparent'}`}>
+                        <PlatformIcon platform={platform} className={`text-2xl mb-2 ${getBrandColor(platform)}`} />
                         <span className={`font-headline-sm text-headline-sm uppercase ${count > 0 ? 'text-primary' : 'text-on-surface'}`}>{platform}</span>
                         <span className={`text-label-lg mt-cxs ${count > 0 ? 'text-primary font-medium' : 'text-on-surface-variant'}`}>{count} Connected</span>
                       </div>

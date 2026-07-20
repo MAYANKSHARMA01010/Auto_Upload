@@ -68,6 +68,13 @@ app.add_middleware(
 # Include all API routes
 app.include_router(api_router)
 
+import os
+from fastapi.staticfiles import StaticFiles
+
+# Serve local uploads when R2 is not configured
+os.makedirs("uploads", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
 from fastapi.responses import RedirectResponse
 
 @app.get("/", include_in_schema=False)

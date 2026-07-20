@@ -18,10 +18,16 @@ class StorageService:
     def __init__(self) -> None:
         self._client_instance = None
         self.bucket = settings.R2_BUCKET_NAME
-        self.public_url = settings.R2_PUBLIC_URL.rstrip("/")
+        self.is_local = not bool(settings.R2_ACCESS_KEY_ID)
+        self.public_url = settings.R2_PUBLIC_URL.rstrip("/") if settings.R2_PUBLIC_URL else "http://localhost:8000/uploads"
+        
+        if self.is_local:
+            Path("uploads").mkdir(exist_ok=True)
 
     @property
     def _client(self):
+        if self.is_local:
+            return None
         if self._client_instance is None:
             # If endpoint is invalid or empty, boto3 will raise ValueError.
             # Lazy initialization prevents the app from crashing on startup.
@@ -61,12 +67,18 @@ class StorageService:
 
     def _upload(self, file_bytes: bytes, object_key: str, content_type: str) -> dict:
         """Internal upload method. Returns object key and public URL."""
-        self._client.put_object(
-            Bucket=self.bucket,
-            Key=object_key,
-            Body=file_bytes,
-            ContentType=content_type,
-        )
+        if self.is_local:
+            file_path = Path("uploads") / object_key
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(file_path, "wb") as f:
+                f.write(file_bytes)
+        else:
+            self._client.put_object(
+                Bucket=self.bucket,
+                Key=object_key,
+                Body=file_bytes,
+                ContentType=content_type,
+            )
         public_url = f"{self.public_url}/{object_key}"
         return {"object_key": object_key, "public_url": public_url}
 
