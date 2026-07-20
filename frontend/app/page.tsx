@@ -2,10 +2,11 @@ import Link from "next/link";
 import { PublicNavbar } from "@/components/layout/PublicNavbar";
 import { PublicFooter } from "@/components/layout/PublicFooter";
 
+import { FaYoutube, FaInstagram, FaTiktok, FaFacebook, FaXTwitter } from "react-icons/fa6";
+
 export default function Home() {
     return (
         <div className="bg-background min-h-screen font-body-md text-on-background">
-
             {/* TopAppBar */}
             <PublicNavbar />
             <main className="pt-32">
@@ -52,24 +53,24 @@ export default function Home() {
                         <p className="font-label-md text-label-md uppercase tracking-[0.2em] text-on-surface-variant font-bold">Trusted by brands on</p>
                         <div className="flex flex-wrap justify-center gap-cxl opacity-60">
                             <div className="flex items-center gap-cxs group">
-                                <span className="material-symbols-outlined text-secondary" style={{ fontVariationSettings: "'FILL' 1" }}>play_circle</span>
+                                <FaYoutube className="text-secondary text-2xl" />
                                 <span className="font-bold text-on-surface">YouTube</span>
                             </div>
                             <div className="flex items-center gap-cxs group">
-                                <span className="material-symbols-outlined text-tertiary">camera</span>
+                                <FaInstagram className="text-tertiary text-2xl" />
                                 <span className="font-bold text-on-surface">Instagram</span>
                             </div>
                             <div className="flex items-center gap-cxs group">
-                                <span className="material-symbols-outlined text-primary">movie_edit</span>
+                                <FaTiktok className="text-primary text-2xl" />
                                 <span className="font-bold text-on-surface">TikTok</span>
                             </div>
                             <div className="flex items-center gap-cxs group">
-                                <span className="material-symbols-outlined text-secondary-container">face_nod</span>
+                                <FaFacebook className="text-secondary-container text-2xl" />
                                 <span className="font-bold text-on-surface">Facebook</span>
                             </div>
                             <div className="flex items-center gap-cxs group">
-                                <span className="material-symbols-outlined text-on-surface">close</span>
-                                <span className="font-bold text-on-surface">X</span>
+                                <FaXTwitter className="text-on-surface text-2xl" />
+                                <span className="font-bold text-on-surface">Twitter</span>
                             </div>
                         </div>
                     </div>

@@ -59,11 +59,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!isAuthenticated && !PUBLIC_ROUTES.includes(pathname)) {
         router.push("/login");
       }
-      if (isAuthenticated && (pathname === "/login" || pathname === "/register")) {
+      if (isAuthenticated && (pathname === "/login" || pathname === "/register" || pathname === "/")) {
         router.push("/dashboard");
       }
     } else if (_hasHydrated && !isRefreshing && isAuthenticated) {
-        if (pathname === "/login" || pathname === "/register") {
+        if (pathname === "/login" || pathname === "/register" || pathname === "/") {
             router.push("/dashboard");
         }
     }
