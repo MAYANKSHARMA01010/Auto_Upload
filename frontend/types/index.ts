@@ -102,3 +102,132 @@ export interface ActivityLog {
   metadata_json: Record<string, any> | null;
   created_at: string;
 }
+
+// ── Shorts-Factory Manifest Types ─────────────────────────────────────────────
+
+export interface YoutubePlatformConfig {
+  enabled: boolean;
+  title: string;
+  description: string;
+  hashtags: string[];
+  video_tags: string[];
+  cover_path: string;
+  scheduled_at: string;
+  privacy: "private" | "unlisted" | "public";
+  category_id?: string;
+  default_language?: string;
+}
+
+export interface InstagramPlatformConfig {
+  enabled: boolean;
+  caption: string;
+  hashtags: string[];
+  cover_path: string;
+  scheduled_at: string;
+  share_to_feed?: boolean;
+}
+
+export interface FacebookPlatformConfig {
+  enabled: boolean;
+  title: string;
+  description: string;
+  hashtags: string[];
+  cover_path: string;
+  scheduled_at: string;
+}
+
+export interface TiktokPlatformConfig {
+  enabled: boolean;
+  caption: string;
+  hashtags: string[];
+  cover_path: string;
+  scheduled_at: string;
+  allow_duet?: boolean;
+  allow_stitch?: boolean;
+}
+
+export interface XPlatformConfig {
+  enabled: boolean;
+  tweet_text: string;
+  hashtags: string[];
+  cover_path?: string;
+  scheduled_at: string;
+}
+
+export interface SnapchatPlatformConfig {
+  enabled: boolean;
+  caption: string;
+  hashtags: string[];
+  cover_path: string;
+  scheduled_at: string;
+}
+
+export interface ThreadsPlatformConfig {
+  enabled: boolean;
+  post_text: string;
+  hashtags: string[];
+  cover_path?: string;
+  scheduled_at: string;
+}
+
+export interface ManifestPlatforms {
+  youtube?: YoutubePlatformConfig;
+  instagram?: InstagramPlatformConfig;
+  facebook?: FacebookPlatformConfig;
+  tiktok?: TiktokPlatformConfig;
+  x?: XPlatformConfig;
+  snapchat?: SnapchatPlatformConfig;
+  threads?: ThreadsPlatformConfig;
+}
+
+export interface ManifestAssets {
+  video_path: string;
+  default_cover_path: string;
+  cover_timestamp: string;
+}
+
+export interface ManifestMasterMetadata {
+  title: string;
+  description: string;
+  hashtags: string[];
+  video_tags: string[];
+  language: string;
+}
+
+export interface ManifestGenerationParams {
+  starting_prompt: string;
+  title: string;
+  script: string;
+  keywords: string[];
+}
+
+export interface ManifestProjectInfo {
+  id: string;
+  created_at: string;
+  status: "ready_to_upload" | "scheduled" | "published" | "failed" | string;
+  generation_params: ManifestGenerationParams;
+}
+
+export interface Manifest {
+  project_info: ManifestProjectInfo;
+  assets: ManifestAssets;
+  master_metadata: ManifestMasterMetadata;
+  platforms: ManifestPlatforms;
+}
+
+export interface ManifestSummary {
+  id: string;
+  status: string;
+  title: string;
+  description: string;
+  video_path: string;
+  cover_path: string;
+  cover_timestamp: string;
+  size_mb: number;
+  duration?: number;
+  duration_formatted?: string;
+  platforms_enabled: string[];
+  created_at: string;
+  manifest_path: string;
+}
+

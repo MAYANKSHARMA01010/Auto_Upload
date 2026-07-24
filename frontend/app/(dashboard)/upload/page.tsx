@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { UploadCloud, Image as ImageIcon, CalendarIcon, Loader2, CheckCircle2 } from "lucide-react";
+import { UploadCloud, Image as ImageIcon, Loader2, CheckCircle2 } from "lucide-react";
 
 import { api } from "@/lib/axios";
 import { ConnectedAccount } from "@/types";
@@ -17,7 +16,6 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
-// Stub components for Date/Time picker since date-picker wasn't added successfully
 const DatePickerStub = ({ date, setDate }: any) => (
   <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full" />
 );
@@ -37,10 +35,8 @@ const PLATFORMS = [
 
 export default function UploadPage() {
   const router = useRouter();
-  const [step, setStep] = useState(1);
   const [isUploading, setIsUploading] = useState(false);
 
-  // State
   const [videoId, setVideoId] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
@@ -58,25 +54,21 @@ export default function UploadPage() {
     },
   });
 
-  // Platform specific forms state
   const [platformData, setPlatformData] = useState<Record<string, any>>({});
 
   const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const formData = new FormData();
     formData.append("file", file);
-
     setIsUploading(true);
     try {
       const res = await api.post("/videos/upload", formData, {
-        headers: { "Content-Type": "multipart/form-data" }
+        headers: { "Content-Type": "multipart/form-data" },
       });
       setVideoId(res.data.video.id);
       setVideoUrl(res.data.video.video_url);
       toast.success("Video uploaded successfully");
-      setStep(2);
     } catch (err: any) {
       toast.error(typeof err.response?.data?.detail === "string" ? err.response.data.detail : "Upload failed");
     } finally {
@@ -88,14 +80,12 @@ export default function UploadPage() {
     if (!videoId) return;
     const file = e.target.files?.[0];
     if (!file) return;
-
     const formData = new FormData();
     formData.append("file", file);
-
     setIsUploading(true);
     try {
       const res = await api.post(`/videos/${videoId}/thumbnail`, formData, {
-        headers: { "Content-Type": "multipart/form-data" }
+        headers: { "Content-Type": "multipart/form-data" },
       });
       setThumbnailUrl(res.data.thumbnail_url);
       toast.success("Thumbnail uploaded successfully");
@@ -107,55 +97,45 @@ export default function UploadPage() {
   };
 
   const toggleAccount = (accountId: string) => {
-    setSelectedAccounts(prev =>
-      prev.includes(accountId) ? prev.filter(id => id !== accountId) : [...prev, accountId]
+    setSelectedAccounts((prev) =>
+      prev.includes(accountId) ? prev.filter((id) => id !== accountId) : [...prev, accountId]
     );
   };
 
   const handlePlatformDataChange = (platform: string, field: string, value: any) => {
-    setPlatformData(prev => ({
+    setPlatformData((prev) => ({
       ...prev,
-      [platform]: {
-        ...(prev[platform] || {}),
-        [field]: value
-      }
+      [platform]: { ...(prev[platform] || {}), [field]: value },
     }));
   };
 
   const handleSave = async (status: "draft" | "scheduled") => {
     if (!videoId) return toast.error("Please upload a video first");
     if (selectedAccounts.length === 0) return toast.error("Select at least one account");
-
     if (status === "scheduled" && (!scheduleDate || !scheduleTime)) {
       return toast.error("Please select schedule date and time");
     }
-
     setIsUploading(true);
-
     try {
       let schedule_datetime = null;
       if (scheduleDate && scheduleTime) {
-        // Simple combination for this example (assumes local timezone)
         schedule_datetime = new Date(`${scheduleDate}T${scheduleTime}`).toISOString();
       }
-
-      const posts = selectedAccounts.map(accountId => {
-        const acc = accounts?.find(a => a.id === accountId);
+      const posts = selectedAccounts.map((accountId) => {
+        const acc = accounts?.find((a) => a.id === accountId);
         return {
           platform: acc?.platform,
           connected_account_id: accountId,
           status,
-          ...(platformData[acc?.platform || ""] || {})
+          ...(platformData[acc?.platform || ""] || {}),
         };
       });
-
       await api.post("/schedules/bulk", {
         video_id: videoId,
         schedule_datetime,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        posts
+        posts,
       });
-
       toast.success(status === "scheduled" ? "Posts scheduled successfully!" : "Saved as draft");
       router.push(status === "scheduled" ? "/scheduled" : "/drafts");
     } catch (err: any) {
@@ -166,13 +146,12 @@ export default function UploadPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 pb-12">
+    <div className="max-w-5xl mx-auto space-y-8 pb-12 px-6 pt-6 overflow-y-auto">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight">Create Post</h2>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
         {/* Left Column - File Upload & Schedule */}
         <div className="md:col-span-1 space-y-6">
           <Card>
@@ -193,11 +172,9 @@ export default function UploadPage() {
                     </label>
                   </div>
                 ) : (
-                  <div className="bg-muted p-4 rounded-lg flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-green-500" />
-                      <span className="text-sm font-medium">Video uploaded</span>
-                    </div>
+                  <div className="bg-muted p-4 rounded-lg flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                    <span className="text-sm font-medium">Video uploaded</span>
                   </div>
                 )}
               </div>
@@ -215,11 +192,9 @@ export default function UploadPage() {
                       </label>
                     </div>
                   ) : (
-                    <div className="bg-muted p-4 rounded-lg flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="h-5 w-5 text-green-500" />
-                        <span className="text-sm font-medium">Thumbnail uploaded</span>
-                      </div>
+                    <div className="bg-muted p-4 rounded-lg flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      <span className="text-sm font-medium">Thumbnail uploaded</span>
                     </div>
                   )}
                 </div>
@@ -255,24 +230,18 @@ export default function UploadPage() {
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {accounts?.map((account) => {
-                  const plat = PLATFORMS.find(p => p.id === account.platform);
-                  const color = plat?.color || "bg-gray-100 text-gray-900";
+                  const plat = PLATFORMS.find((p) => p.id === account.platform);
                   const label = plat?.label || account.platform;
                   return (
                     <div
                       key={account.id}
-                      className={`flex items-start space-x-3 p-4 rounded-lg border cursor-pointer transition-colors ${selectedAccounts.includes(account.id) ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}
+                      className={`flex items-start space-x-3 p-4 rounded-lg border cursor-pointer transition-colors ${selectedAccounts.includes(account.id) ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`}
                       onClick={() => toggleAccount(account.id)}
                     >
-                      <Checkbox
-                        checked={selectedAccounts.includes(account.id)}
-                        onCheckedChange={() => toggleAccount(account.id)}
-                      />
+                      <Checkbox checked={selectedAccounts.includes(account.id)} onCheckedChange={() => toggleAccount(account.id)} />
                       <div className="space-y-1 leading-none">
                         <Label className="cursor-pointer">{label}</Label>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {account.username ? `@${account.username}` : "Connected"}
-                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">{account.username ? `@${account.username}` : "Connected"}</p>
                       </div>
                     </div>
                   );
@@ -293,131 +262,102 @@ export default function UploadPage() {
               <CardContent>
                 <Accordion className="w-full">
                   {(() => {
-                    const activePlatforms = [...new Set(selectedAccounts.map(id => accounts?.find(a => a.id === id)?.platform).filter(Boolean))];
+                    const activePlatforms = [...new Set(selectedAccounts.map((id) => accounts?.find((a) => a.id === id)?.platform).filter(Boolean))];
                     return (
                       <>
-                  {activePlatforms.includes("youtube") && (
-                    <AccordionItem value="youtube">
-                      <AccordionTrigger className="hover:no-underline">
-                        <div className="flex items-center gap-2">
-                          <span className="flex h-2 w-2 rounded-full bg-red-500" />
-                          YouTube Shorts
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="space-y-4 pt-4 px-1">
-                        <div className="space-y-2">
-                          <Label>Title</Label>
-                          <Input
-                            placeholder="Enter video title"
-                            onChange={(e) => handlePlatformDataChange("youtube", "title", e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Description</Label>
-                          <Textarea
-                            placeholder="Enter video description"
-                            rows={4}
-                            onChange={(e) => handlePlatformDataChange("youtube", "description", e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Tags (comma separated)</Label>
-                          <Input
-                            placeholder="tag1, tag2, tag3"
-                            onChange={(e) => handlePlatformDataChange("youtube", "tags", e.target.value)}
-                          />
-                        </div>
-                        <div className="flex items-center space-x-2 pt-2">
-                          <Checkbox
-                            id="yt-kids"
-                            onCheckedChange={(c) => handlePlatformDataChange("youtube", "made_for_kids", c)}
-                          />
-                          <Label htmlFor="yt-kids">Made for kids</Label>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  )}
+                        {activePlatforms.includes("youtube") && (
+                          <AccordionItem value="youtube">
+                            <AccordionTrigger className="hover:no-underline">
+                              <div className="flex items-center gap-2">
+                                <span className="flex h-2 w-2 rounded-full bg-red-500" />
+                                YouTube Shorts
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="space-y-4 pt-4 px-1">
+                              <div className="space-y-2">
+                                <Label>Title</Label>
+                                <Input placeholder="Enter video title" onChange={(e) => handlePlatformDataChange("youtube", "title", e.target.value)} />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Description</Label>
+                                <Textarea placeholder="Enter video description" rows={4} onChange={(e) => handlePlatformDataChange("youtube", "description", e.target.value)} />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Tags (comma separated)</Label>
+                                <Input placeholder="tag1, tag2, tag3" onChange={(e) => handlePlatformDataChange("youtube", "tags", e.target.value)} />
+                              </div>
+                              <div className="flex items-center space-x-2 pt-2">
+                                <Checkbox id="yt-kids" onCheckedChange={(c) => handlePlatformDataChange("youtube", "made_for_kids", c)} />
+                                <Label htmlFor="yt-kids">Made for kids</Label>
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                        )}
 
-                  {activePlatforms.includes("instagram") && (
-                    <AccordionItem value="instagram">
-                      <AccordionTrigger className="hover:no-underline">
-                        <div className="flex items-center gap-2">
-                          <span className="flex h-2 w-2 rounded-full bg-pink-500" />
-                          Instagram Reels
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="space-y-4 pt-4 px-1">
-                        <div className="space-y-2">
-                          <Label>Caption</Label>
-                          <Textarea
-                            placeholder="Write a caption..."
-                            rows={4}
-                            onChange={(e) => handlePlatformDataChange("instagram", "caption", e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Location</Label>
-                          <Input
-                            placeholder="e.g. New York, NY"
-                            onChange={(e) => handlePlatformDataChange("instagram", "location", e.target.value)}
-                          />
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  )}
+                        {activePlatforms.includes("instagram") && (
+                          <AccordionItem value="instagram">
+                            <AccordionTrigger className="hover:no-underline">
+                              <div className="flex items-center gap-2">
+                                <span className="flex h-2 w-2 rounded-full bg-pink-500" />
+                                Instagram Reels
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="space-y-4 pt-4 px-1">
+                              <div className="space-y-2">
+                                <Label>Caption</Label>
+                                <Textarea placeholder="Write a caption..." rows={4} onChange={(e) => handlePlatformDataChange("instagram", "caption", e.target.value)} />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Location</Label>
+                                <Input placeholder="e.g. New York, NY" onChange={(e) => handlePlatformDataChange("instagram", "location", e.target.value)} />
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                        )}
 
-                  {/* Add similar accordion items for Facebook, TikTok, Threads, X */}
-                  {activePlatforms.includes("tiktok") && (
-                    <AccordionItem value="tiktok">
-                      <AccordionTrigger className="hover:no-underline">
-                        <div className="flex items-center gap-2">
-                          <span className="flex h-2 w-2 rounded-full bg-neutral-900 dark:bg-neutral-100" />
-                          TikTok
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="space-y-4 pt-4 px-1">
-                        <div className="space-y-2">
-                          <Label>Caption</Label>
-                          <Textarea
-                            placeholder="Write a caption..."
-                            rows={4}
-                            onChange={(e) => handlePlatformDataChange("tiktok", "caption", e.target.value)}
-                          />
-                        </div>
-                        <div className="flex flex-col gap-3 pt-2">
-                          <div className="flex items-center space-x-2">
-                            <Checkbox id="tk-stitch" defaultChecked onCheckedChange={(c) => handlePlatformDataChange("tiktok", "allow_stitch", c)} />
-                            <Label htmlFor="tk-stitch">Allow Stitch</Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Checkbox id="tk-duet" defaultChecked onCheckedChange={(c) => handlePlatformDataChange("tiktok", "allow_duet", c)} />
-                            <Label htmlFor="tk-duet">Allow Duet</Label>
-                          </div>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  )}
+                        {activePlatforms.includes("tiktok") && (
+                          <AccordionItem value="tiktok">
+                            <AccordionTrigger className="hover:no-underline">
+                              <div className="flex items-center gap-2">
+                                <span className="flex h-2 w-2 rounded-full bg-neutral-900 dark:bg-neutral-100" />
+                                TikTok
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="space-y-4 pt-4 px-1">
+                              <div className="space-y-2">
+                                <Label>Caption</Label>
+                                <Textarea placeholder="Write a caption..." rows={4} onChange={(e) => handlePlatformDataChange("tiktok", "caption", e.target.value)} />
+                              </div>
+                              <div className="flex flex-col gap-3 pt-2">
+                                <div className="flex items-center space-x-2">
+                                  <Checkbox id="tk-stitch" defaultChecked onCheckedChange={(c) => handlePlatformDataChange("tiktok", "allow_stitch", c)} />
+                                  <Label htmlFor="tk-stitch">Allow Stitch</Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <Checkbox id="tk-duet" defaultChecked onCheckedChange={(c) => handlePlatformDataChange("tiktok", "allow_duet", c)} />
+                                  <Label htmlFor="tk-duet">Allow Duet</Label>
+                                </div>
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                        )}
 
-                  {activePlatforms.includes("x") && (
-                    <AccordionItem value="x">
-                      <AccordionTrigger className="hover:no-underline">
-                        <div className="flex items-center gap-2">
-                          <span className="flex h-2 w-2 rounded-full bg-blue-400" />
-                          X (Twitter)
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="space-y-4 pt-4 px-1">
-                        <div className="space-y-2">
-                          <Label>Post Text</Label>
-                          <Textarea
-                            placeholder="What's happening?"
-                            rows={4}
-                            onChange={(e) => handlePlatformDataChange("x", "post_text", e.target.value)}
-                          />
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  )}
+                        {activePlatforms.includes("x") && (
+                          <AccordionItem value="x">
+                            <AccordionTrigger className="hover:no-underline">
+                              <div className="flex items-center gap-2">
+                                <span className="flex h-2 w-2 rounded-full bg-blue-400" />
+                                X (Twitter)
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="space-y-4 pt-4 px-1">
+                              <div className="space-y-2">
+                                <Label>Post Text</Label>
+                                <Textarea placeholder="What's happening?" rows={4} onChange={(e) => handlePlatformDataChange("x", "post_text", e.target.value)} />
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                        )}
                       </>
                     );
                   })()}
@@ -434,7 +374,6 @@ export default function UploadPage() {
               </CardFooter>
             </Card>
           )}
-
         </div>
       </div>
     </div>

@@ -75,6 +75,12 @@ class Settings(BaseSettings):
     X_API_SECRET: str = ""
     X_REDIRECT_URI: str = "http://localhost:8000/api/v1/accounts/oauth/x/callback"
 
+    # Gemini & Stock APIs
+    GEMINI_API_KEY: str = ""
+    PEXELS_API_KEY: str = ""
+    GEMINI_PRIMARY_MODEL: str = "gemini-2.0-flash"
+    GEMINI_CANDIDATE_MODEL: str = "gemini-2.0-flash-lite"
+
     # Frontend
     FRONTEND_URL: str = "http://localhost:3000"
 
