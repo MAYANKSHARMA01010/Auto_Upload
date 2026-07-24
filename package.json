@@ -1,0 +1,9 @@
+{
+  "name": "auto-upload",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "bash scripts/dev.sh",
+    "dev:terms": "bash scripts/dev.sh --terms"
+  }
+}
