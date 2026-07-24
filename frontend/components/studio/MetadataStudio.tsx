@@ -341,6 +341,7 @@ export function MetadataStudio({ manifest, projectId, onManifestChange }: Metada
         {/* ── Publish ───────────────────────────────── */}
         {activeSection === "publish" && (
           <UploadModePanel
+            manifest={manifest}
             mode={uploadMode}
             privacy={privacy}
             scheduleDate={scheduleDate}
