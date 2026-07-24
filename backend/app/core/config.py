@@ -52,7 +52,7 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     SMTP_FROM: str = "noreply@clipscheduler.io"
 
-    # Platform OAuth
+    # Platform OAuth Credentials
     YOUTUBE_CLIENT_ID: str = ""
     YOUTUBE_CLIENT_SECRET: str = ""
     YOUTUBE_REDIRECT_URI: str = "http://localhost:8000/api/v1/accounts/oauth/youtube/callback"
@@ -63,6 +63,7 @@ class Settings(BaseSettings):
 
     FACEBOOK_APP_ID: str = ""
     FACEBOOK_APP_SECRET: str = ""
+    FACEBOOK_REDIRECT_URI: str = "http://localhost:8000/api/v1/accounts/oauth/facebook/callback"
 
     TIKTOK_CLIENT_KEY: str = ""
     TIKTOK_CLIENT_SECRET: str = ""
@@ -70,10 +71,15 @@ class Settings(BaseSettings):
 
     THREADS_CLIENT_ID: str = ""
     THREADS_CLIENT_SECRET: str = ""
+    THREADS_REDIRECT_URI: str = "http://localhost:8000/api/v1/accounts/oauth/threads/callback"
 
     X_API_KEY: str = ""
     X_API_SECRET: str = ""
     X_REDIRECT_URI: str = "http://localhost:8000/api/v1/accounts/oauth/x/callback"
+
+    SNAPCHAT_CLIENT_ID: str = ""
+    SNAPCHAT_CLIENT_SECRET: str = ""
+    SNAPCHAT_REDIRECT_URI: str = "http://localhost:8000/api/v1/accounts/oauth/snapchat/callback"
 
     # Gemini & Stock APIs
     GEMINI_API_KEY: str = ""
