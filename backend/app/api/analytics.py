@@ -1,13 +1,15 @@
 """
-Analytics API — dashboard stats, platform breakdown, timeline.
+Analytics API — dashboard stats, platform breakdown, timeline, and dynamic social insights.
 """
 from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, get_db
+from app.models.connected_account import ConnectedAccount
 from app.models.scheduled_post import Platform, PostStatus, ScheduledPost
 from app.models.user import User
 from app.models.video import Video
@@ -118,3 +120,102 @@ async def get_timeline(
         )
 
     return timeline
+
+
+@router.get("/social-insights")
+async def get_social_insights(
+    platform: str = Query("youtube"),
+    account_id: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Return dynamic per-account analytics and video metrics directly from connected accounts and database posts.
+    No hardcoded mock data.
+    """
+    p_lower = platform.lower()
+
+    # 1. Query connected accounts for this platform
+    acc_query = select(ConnectedAccount).where(
+        and_(
+            ConnectedAccount.user_id == current_user.id,
+            ConnectedAccount.is_active == True,
+        )
+    )
+    acc_result = await db.execute(acc_query)
+    all_accounts = acc_result.scalars().all()
+
+    # Filter connected accounts matching target platform
+    platform_accounts = [
+        {
+            "id": str(acc.id),
+            "platform": acc.platform.value if hasattr(acc.platform, "value") else str(acc.platform),
+            "username": acc.username or acc.platform_user_id or "Connected Account",
+            "platform_user_id": acc.platform_user_id,
+            "created_at": acc.created_at.isoformat() if acc.created_at else None,
+        }
+        for acc in all_accounts
+        if (acc.platform.value if hasattr(acc.platform, "value") else str(acc.platform)).lower() == p_lower
+    ]
+
+    # Select target account
+    selected_account = None
+    if account_id:
+        selected_account = next((a for a in platform_accounts if a["id"] == account_id), None)
+    if not selected_account and platform_accounts:
+        selected_account = platform_accounts[0]
+
+    # 2. Query posts for this specific platform and user
+    posts_query = (
+        select(ScheduledPost, Video)
+        .join(Video, ScheduledPost.video_id == Video.id)
+        .where(
+            and_(
+                ScheduledPost.user_id == current_user.id,
+            )
+        )
+    )
+
+    if p_lower:
+        posts_query = posts_query.where(ScheduledPost.platform == p_lower)
+
+    if selected_account:
+        posts_query = posts_query.where(ScheduledPost.connected_account_id == selected_account["id"])
+
+    posts_query = posts_query.order_by(ScheduledPost.created_at.desc())
+    posts_result = await db.execute(posts_query)
+    rows = posts_result.all()
+
+    # 3. Calculate dynamic statistics from database rows
+    total_posts = len(rows)
+    published_count = sum(1 for post, _ in rows if post.status == PostStatus.PUBLISHED)
+    scheduled_count = sum(1 for post, _ in rows if post.status == PostStatus.SCHEDULED)
+    failed_count = sum(1 for post, _ in rows if post.status == PostStatus.FAILED)
+    draft_count = sum(1 for post, _ in rows if post.status == PostStatus.DRAFT)
+
+    video_items = []
+    for post, video in rows:
+        video_items.append({
+            "id": str(post.id),
+            "video_id": str(video.id),
+            "title": post.title or post.caption or post.post_text or video.title or "Untitled Short",
+            "status": post.status.value if hasattr(post.status, "value") else str(post.status),
+            "scheduled_at": post.schedule_datetime.isoformat() if post.schedule_datetime else None,
+            "published_at": post.published_at.isoformat() if post.published_at else None,
+            "platform_post_id": post.platform_post_id,
+            "error_message": post.error_message,
+        })
+
+    return {
+        "platform": p_lower,
+        "connected_accounts": platform_accounts,
+        "selected_account": selected_account,
+        "stats": {
+            "total_posts": total_posts,
+            "published": published_count,
+            "scheduled": scheduled_count,
+            "failed": failed_count,
+            "drafts": draft_count,
+        },
+        "videos": video_items,
+    }

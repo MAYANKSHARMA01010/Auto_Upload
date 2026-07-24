@@ -14,6 +14,7 @@ const navItems = [
   { name: "Calendar", href: "/calendar", icon: "calendar_month" },
   { name: "Accounts", href: "/accounts", icon: "group" },
   { name: "Analytics", href: "/analytics", icon: "analytics" },
+  { name: "Social Insights", href: "/social-insights", icon: "insights" },
   { name: "Settings", href: "/settings", icon: "settings" },
 ];
 
