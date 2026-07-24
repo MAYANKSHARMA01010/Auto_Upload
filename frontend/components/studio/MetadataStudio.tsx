@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from "react";
 import { Manifest } from "@/types";
-import { saveManifest } from "@/lib/manifests";
+import { saveManifest, diskPathToUrl } from "@/lib/manifests";
 import { AiChips } from "./AiChips";
 import { PlatformTabs } from "./PlatformTabs";
 import { UploadModePanel, UploadMode, PrivacyMode } from "./UploadModePanel";
@@ -29,6 +29,7 @@ export function MetadataStudio({ manifest, projectId, onManifestChange }: Metada
   const [scheduleDate, setScheduleDate] = useState("");
   const [scheduleTime, setScheduleTime] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [coverImgError, setCoverImgError] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Debounced auto-save
@@ -100,6 +101,7 @@ export function MetadataStudio({ manifest, projectId, onManifestChange }: Metada
 
   const hashtags = manifest.master_metadata.hashtags ?? [];
   const videoTags = manifest.master_metadata.video_tags ?? [];
+  const coverUrl = diskPathToUrl(manifest.assets?.default_cover_path ?? "");
 
   return (
     <div className="flex flex-col h-full">
@@ -130,17 +132,7 @@ export function MetadataStudio({ manifest, projectId, onManifestChange }: Metada
         {/* ── Master Metadata ─────────────────────────── */}
         {activeSection === "master" && (
           <>
-            {/* Project Info Banner */}
-            <div className="flex items-center gap-2 rounded-lg bg-surface-container border border-outline-variant px-3 py-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-on-surface-variant truncate">
-                  {manifest.project_info.id} · {manifest.project_info.status}
-                </p>
-              </div>
-            </div>
-
-            {/* Title */}
+            {/* 1. Title */}
             <div className="space-y-2">
               <label className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Master Title</label>
               <input
@@ -162,7 +154,7 @@ export function MetadataStudio({ manifest, projectId, onManifestChange }: Metada
               />
             </div>
 
-            {/* Description */}
+            {/* 2. Description */}
             <div className="space-y-2">
               <label className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Description</label>
               <textarea
@@ -182,7 +174,7 @@ export function MetadataStudio({ manifest, projectId, onManifestChange }: Metada
               />
             </div>
 
-            {/* Hashtags */}
+            {/* 3. Hashtags */}
             <div className="space-y-2">
               <label className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Hashtags</label>
               <input
@@ -196,16 +188,29 @@ export function MetadataStudio({ manifest, projectId, onManifestChange }: Metada
                 placeholder="#shorts #science #facts"
               />
               {/* Hashtag pills */}
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1 mb-1">
                 {hashtags.slice(0, 8).map((tag, i) => (
                   <span key={i} className="px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px]">
                     #{tag.replace(/^#/, "")}
                   </span>
                 ))}
               </div>
+              <AiChips
+                fieldLabel="hashtags"
+                currentValue={hashtags.map((h) => `#${h.replace(/^#/, "")}`).join(" ")}
+                onRewrite={(v) => {
+                  const tags = v.split(/[\s,]+/).filter(Boolean).map((t) => t.replace(/^#/, ""));
+                  updateMaster("hashtags", tags);
+                }}
+                chips={[
+                  { label: "Trending", emoji: "🔥", prompt: "Generate 5 trending viral hashtags for this short video. Include # symbol, space separated." },
+                  { label: "Niche", emoji: "🎯", prompt: "Generate 5 specific targeted niche hashtags for this topic. Include # symbol, space separated." },
+                  { label: "Viral", emoji: "🚀", prompt: "Generate 5 high-converting YouTube Shorts & Reels hashtags. Include # symbol, space separated." },
+                ]}
+              />
             </div>
 
-            {/* Video Tags */}
+            {/* 4. Video Tags */}
             <div className="space-y-2">
               <label className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Video Tags</label>
               <textarea
@@ -232,17 +237,93 @@ export function MetadataStudio({ manifest, projectId, onManifestChange }: Metada
               />
             </div>
 
-            {/* Script preview */}
-            {manifest.project_info.generation_params?.script && (
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Original Script</label>
-                <div className="rounded-lg bg-surface-container border border-outline-variant px-3 py-2 max-h-24 overflow-y-auto">
-                  <p className="text-[10px] text-on-surface-variant leading-relaxed italic">
-                    {manifest.project_info.generation_params.script}
+            {/* 5. Cover Image Preview Card (Big Size Display) */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Default Cover Image</label>
+                <span className="text-[10px] text-primary font-mono bg-primary/10 border border-primary/20 px-2.5 py-0.5 rounded-full font-medium">
+                  Timestamp: {manifest.assets?.cover_timestamp || "2.0"}s
+                </span>
+              </div>
+              <div className="rounded-2xl border border-outline-variant bg-surface-container p-4 flex flex-col items-center gap-3">
+                <div className="w-48 h-80 rounded-xl bg-black shadow-xl overflow-hidden relative border border-outline-variant flex items-center justify-center group">
+                  {coverUrl && !coverImgError ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={coverUrl}
+                      alt="Cover image"
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      onError={() => setCoverImgError(true)}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center bg-surface-container-high text-on-surface-variant gap-2 p-4 text-center">
+                      <span className="material-symbols-outlined text-3xl text-primary">movie</span>
+                      <p className="text-xs font-semibold text-on-surface">Cover Frame</p>
+                      <p className="text-[10px] opacity-70">Select cover frame in Preview column</p>
+                    </div>
+                  )}
+                  <div className="absolute top-2 right-2 bg-black/75 backdrop-blur-md rounded-full px-2 py-0.5">
+                    <span className="text-[9px] text-white font-mono font-bold">9:16</span>
+                  </div>
+                  <div className="absolute bottom-2 left-2 bg-black/75 backdrop-blur-md rounded-md px-2 py-0.5">
+                    <span className="text-[9px] text-white font-mono">{manifest.assets?.cover_timestamp || "2.0"}s</span>
+                  </div>
+                </div>
+                <div className="text-center space-y-1 max-w-xs">
+                  <p className="text-xs font-medium text-on-surface truncate">
+                    {manifest.assets?.default_cover_path?.split("/").pop() || "cover.jpg"}
+                  </p>
+                  <p className="text-[10px] text-on-surface-variant leading-relaxed">
+                    Primary cover image published across YouTube Shorts, Reels & TikTok.
                   </p>
                 </div>
               </div>
-            )}
+            </div>
+
+            {/* Divider for Secondary Info (After Scroll) */}
+            <div className="border-t border-outline-variant/60 my-4" />
+
+            {/* 6. Secondary Generation Info (Original Script, Starting Prompt, ID) */}
+            <div className="space-y-4 pt-1">
+              <h4 className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest flex items-center gap-1.5 opacity-80">
+                <span className="material-symbols-outlined text-sm">description</span>
+                Generation Script & Prompt Details
+              </h4>
+
+              {/* Project Status Banner */}
+              <div className="flex items-center gap-2 rounded-lg bg-surface-container border border-outline-variant px-3 py-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] text-on-surface-variant truncate font-mono">
+                    Project ID: {manifest.project_info.id} · Status: {manifest.project_info.status}
+                  </p>
+                </div>
+              </div>
+
+              {/* Original Script */}
+              {manifest.project_info.generation_params?.script && (
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Original Script</label>
+                  <div className="rounded-lg bg-surface-container border border-outline-variant px-3 py-2 max-h-28 overflow-y-auto">
+                    <p className="text-[10px] text-on-surface-variant leading-relaxed italic">
+                      {manifest.project_info.generation_params.script}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Starting Prompt */}
+              {manifest.project_info.generation_params?.starting_prompt && (
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">Starting Prompt</label>
+                  <div className="rounded-lg bg-surface-container border border-outline-variant px-3 py-2 max-h-24 overflow-y-auto">
+                    <p className="text-[10px] text-on-surface-variant leading-relaxed">
+                      {manifest.project_info.generation_params.starting_prompt}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
           </>
         )}
 

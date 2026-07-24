@@ -77,11 +77,16 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # ── Serve shorts-factory local media (videos + covers) for the Studio ────────
 SHORTS_FACTORY_DATA = "/Users/mayanksharma/Downloads/New_Projects/shorts-factory/packages/ClipPilot/data"
-SHORTS_FACTORY_COVERS = "/Users/mayanksharma/Downloads/New_Projects/shorts-factory/data/covers"
+SHORTS_FACTORY_COVERS = "/Users/mayanksharma/Downloads/New_Projects/shorts-factory/packages/ClipPilot/data/covers"
+SHORTS_FACTORY_ROOT_COVERS = "/Users/mayanksharma/Downloads/New_Projects/shorts-factory/data/covers"
+
 if os.path.isdir(SHORTS_FACTORY_DATA):
     app.mount("/local-media/data", StaticFiles(directory=SHORTS_FACTORY_DATA), name="local-media-data")
+
 if os.path.isdir(SHORTS_FACTORY_COVERS):
     app.mount("/local-media/covers", StaticFiles(directory=SHORTS_FACTORY_COVERS), name="local-media-covers")
+elif os.path.isdir(SHORTS_FACTORY_ROOT_COVERS):
+    app.mount("/local-media/covers", StaticFiles(directory=SHORTS_FACTORY_ROOT_COVERS), name="local-media-covers")
 
 from fastapi.responses import RedirectResponse
 

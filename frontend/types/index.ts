@@ -116,6 +116,11 @@ export interface YoutubePlatformConfig {
   privacy: "private" | "unlisted" | "public";
   category_id?: string;
   default_language?: string;
+  made_for_kids?: boolean;
+  upload_hd?: boolean;
+  notify_subscribers?: boolean;
+  allow_comments?: boolean;
+  allow_embedding?: boolean;
 }
 
 export interface InstagramPlatformConfig {
@@ -125,6 +130,9 @@ export interface InstagramPlatformConfig {
   cover_path: string;
   scheduled_at: string;
   share_to_feed?: boolean;
+  upload_as_reel?: boolean;
+  upload_hd?: boolean;
+  audio_name?: string;
 }
 
 export interface FacebookPlatformConfig {
@@ -134,6 +142,9 @@ export interface FacebookPlatformConfig {
   hashtags: string[];
   cover_path: string;
   scheduled_at: string;
+  upload_as_reel?: boolean;
+  upload_hd?: boolean;
+  allow_crossposting?: boolean;
 }
 
 export interface TiktokPlatformConfig {
@@ -144,6 +155,9 @@ export interface TiktokPlatformConfig {
   scheduled_at: string;
   allow_duet?: boolean;
   allow_stitch?: boolean;
+  allow_comments?: boolean;
+  upload_hd?: boolean;
+  brand_content?: boolean;
 }
 
 export interface XPlatformConfig {
@@ -152,6 +166,9 @@ export interface XPlatformConfig {
   hashtags: string[];
   cover_path?: string;
   scheduled_at: string;
+  upload_hd?: boolean;
+  reply_setting?: "everyone" | "following" | "mentioned";
+  sensitive_content?: boolean;
 }
 
 export interface SnapchatPlatformConfig {
@@ -160,6 +177,9 @@ export interface SnapchatPlatformConfig {
   hashtags: string[];
   cover_path: string;
   scheduled_at: string;
+  upload_to_spotlight?: boolean;
+  upload_hd?: boolean;
+  save_to_story?: boolean;
 }
 
 export interface ThreadsPlatformConfig {
@@ -168,6 +188,8 @@ export interface ThreadsPlatformConfig {
   hashtags: string[];
   cover_path?: string;
   scheduled_at: string;
+  upload_hd?: boolean;
+  reply_setting?: "everyone" | "following" | "mentioned";
 }
 
 export interface ManifestPlatforms {

@@ -24,7 +24,7 @@ const PLATFORM_ICONS: Record<string, { icon: React.ElementType; color: string; l
   instagram: { icon: FaInstagram, color: "text-pink-500", label: "Instagram" },
   facebook: { icon: FaFacebook, color: "text-blue-500", label: "Facebook" },
   tiktok: { icon: FaTiktok, color: "text-neutral-100", label: "TikTok" },
-  x: { icon: FaXTwitter, color: "text-sky-400", label: "X (Twitter)" },
+  x: { icon: FaXTwitter, color: "text-sky-400", label: "Twitter" },
   snapchat: { icon: FaSnapchat, color: "text-yellow-400", label: "Snapchat" },
   threads: { icon: FaThreads, color: "text-neutral-300", label: "Threads" },
 };

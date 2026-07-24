@@ -155,7 +155,7 @@ export default function DashboardPage() {
                     return (
                       <div key={platform} className={`rounded-lg p-csm flex flex-col items-center justify-center text-center transition-colors ${count > 0 ? 'bg-primary-container/10 border border-primary/20' : 'bg-surface-container-high border border-transparent'}`}>
                         <PlatformIcon platform={platform} className={`text-2xl mb-2 ${getBrandColor(platform)}`} />
-                        <span className={`font-headline-sm text-headline-sm uppercase ${count > 0 ? 'text-primary' : 'text-on-surface'}`}>{platform}</span>
+                        <span className={`font-headline-sm text-headline-sm uppercase ${count > 0 ? 'text-primary' : 'text-on-surface'}`}>{platform === "X" ? "TWITTER" : platform}</span>
                         <span className={`text-label-lg mt-cxs ${count > 0 ? 'text-primary font-medium' : 'text-on-surface-variant'}`}>{count} Connected</span>
                       </div>
                     );

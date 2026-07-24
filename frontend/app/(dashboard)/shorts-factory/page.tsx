@@ -135,7 +135,7 @@ export default function ShortsFactoryPage() {
       {/* ── COLUMN 2: Video Player ────────────────── */}
       <div
         className="flex-shrink-0 border-r border-outline-variant flex flex-col bg-surface-container-low overflow-hidden"
-        style={{ width: "340px" }}
+        style={{ width: "380px" }}
       >
         {/* Header */}
         <div className="flex items-center gap-2 px-4 py-3 border-b border-outline-variant flex-shrink-0">

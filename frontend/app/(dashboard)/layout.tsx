@@ -23,7 +23,9 @@ export default function DashboardLayout({
       <Sidebar />
       <div className="flex-1 flex flex-col relative h-full overflow-hidden">
         <Header />
-        {children}
+        <main className="flex-1 overflow-y-auto min-h-0">
+          {children}
+        </main>
       </div>
     </div>
   );

@@ -21,7 +21,7 @@ const PLATFORMS = [
   { id: "facebook", name: "Facebook Page", color: "bg-blue-500", textColor: "text-blue-500", icon: FaFacebook },
   { id: "tiktok", name: "TikTok", color: "bg-neutral-900 dark:bg-neutral-100", textColor: "text-neutral-900 dark:text-neutral-100", icon: FaTiktok },
   { id: "threads", name: "Threads", color: "bg-neutral-800 dark:bg-neutral-200", textColor: "text-neutral-800 dark:text-neutral-200", icon: FaThreads },
-  { id: "x", name: "X (Twitter)", color: "bg-neutral-900 dark:bg-neutral-100", textColor: "text-neutral-900 dark:text-neutral-100", icon: FaXTwitter },
+  { id: "x", name: "Twitter", color: "bg-neutral-900 dark:bg-neutral-100", textColor: "text-neutral-900 dark:text-neutral-100", icon: FaXTwitter },
 ];
 
 export default function AccountsPage() {
@@ -62,7 +62,7 @@ export default function AccountsPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="p-6 space-y-6 max-w-5xl mx-auto pb-12">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Connected Accounts</h2>
