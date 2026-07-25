@@ -18,8 +18,11 @@ class XService(BasePlatformConnector):
 
     @classmethod
     def get_oauth_url(cls, state: str) -> str:
-        import urllib.parse, secrets
-        code_challenge = secrets.token_urlsafe(32)
+        import urllib.parse, secrets, hashlib, base64
+        code_verifier = secrets.token_urlsafe(64)
+        code_challenge = base64.urlsafe_b64encode(
+            hashlib.sha256(code_verifier.encode("utf-8")).digest()
+        ).decode("utf-8").replace("=", "")
         params = {
             "response_type": "code",
             "client_id": settings.X_API_KEY,
@@ -27,7 +30,7 @@ class XService(BasePlatformConnector):
             "scope": "tweet.read tweet.write users.read media.write offline.access",
             "state": state,
             "code_challenge": code_challenge,
-            "code_challenge_method": "plain",
+            "code_challenge_method": "S256",
         }
         return f"{cls.AUTH_URL}?{urllib.parse.urlencode(params)}"
 

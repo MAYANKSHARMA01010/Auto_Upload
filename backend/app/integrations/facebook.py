@@ -21,8 +21,8 @@ class FacebookService(BasePlatformConnector):
         import urllib.parse
         params = {
             "client_id": settings.FACEBOOK_APP_ID,
-            "redirect_uri": settings.INSTAGRAM_REDIRECT_URI,
-            "scope": "pages_manage_posts,pages_read_engagement,publish_video",
+            "redirect_uri": settings.FACEBOOK_REDIRECT_URI,
+            "scope": "public_profile,email",
             "response_type": "code",
             "state": state,
         }

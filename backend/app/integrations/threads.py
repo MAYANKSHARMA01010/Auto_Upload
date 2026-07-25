@@ -20,7 +20,7 @@ class ThreadsService(BasePlatformConnector):
         import urllib.parse
         params = {
             "client_id": settings.THREADS_CLIENT_ID,
-            "redirect_uri": settings.INSTAGRAM_REDIRECT_URI,
+            "redirect_uri": settings.THREADS_REDIRECT_URI,
             "scope": "threads_basic,threads_content_publish",
             "response_type": "code",
             "state": state,

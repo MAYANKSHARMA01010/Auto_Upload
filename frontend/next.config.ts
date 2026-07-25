@@ -17,8 +17,23 @@ const nextConfig: NextConfig = {
         port: "8000",
         pathname: "/local-media/**",
       },
+      {
+        protocol: "https",
+        hostname: "*.ngrok-free.dev",
+      },
     ],
   },
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: "http://localhost:8000/api/:path*",
+      },
+    ];
+  },
+  allowedDevOrigins: [
+    "playgroup-pesticide-passport.ngrok-free.dev",
+  ],
 };
 
 export default nextConfig;

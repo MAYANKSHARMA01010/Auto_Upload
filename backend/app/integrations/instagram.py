@@ -14,7 +14,7 @@ class InstagramService(BasePlatformConnector):
     """Instagram Reels connector via Meta Graph API."""
 
     GRAPH_URL = "https://graph.facebook.com/v19.0"
-    AUTH_URL = "https://api.instagram.com/oauth/authorize"
+    AUTH_URL = "https://www.instagram.com/oauth/authorize"
     TOKEN_URL = "https://api.instagram.com/oauth/access_token"
 
     @classmethod
@@ -23,7 +23,7 @@ class InstagramService(BasePlatformConnector):
         params = {
             "client_id": settings.INSTAGRAM_CLIENT_ID,
             "redirect_uri": settings.INSTAGRAM_REDIRECT_URI,
-            "scope": "instagram_basic,instagram_content_publish,pages_read_engagement",
+            "scope": "instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments",
             "response_type": "code",
             "state": state,
         }
