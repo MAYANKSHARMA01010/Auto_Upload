@@ -29,6 +29,8 @@ class ConnectedAccount(Base, TimestampMixin):
         Enum(Platform, name="platform_enum"), nullable=False
     )
     username: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    handle: Mapped[str | None] = mapped_column(String(255), nullable=True)   # e.g. @mayanksharma
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True)    # e.g. sharmamayank01010@gmail.com
     platform_user_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     access_token: Mapped[str | None] = mapped_column(Text, nullable=True)
     refresh_token: Mapped[str | None] = mapped_column(Text, nullable=True)

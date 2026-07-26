@@ -86,6 +86,8 @@ export interface ConnectedAccount {
   user_id: string;
   platform: Platform;
   username: string | null;
+  handle: string | null;
+  email: string | null;
   platform_user_id: string | null;
   expires_at: string | null;
   is_active: boolean;

@@ -54,7 +54,7 @@ const DATE_CHIPS = [
 ];
 
 const PLATFORM_DEFS = [
-  { id: "youtube", label: "YouTube Shorts", icon: FaYoutube, color: "text-red-400" },
+  { id: "youtube", label: "YouTube (Shorts & Long Videos)", icon: FaYoutube, color: "text-red-400" },
   { id: "instagram", label: "Instagram Reels", icon: FaInstagram, color: "text-pink-400" },
   { id: "facebook", label: "Facebook Reels", icon: FaFacebook, color: "text-blue-400" },
   { id: "tiktok", label: "TikTok", icon: FaTiktok, color: "text-on-surface" },

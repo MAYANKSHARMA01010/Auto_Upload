@@ -1,10 +1,6 @@
 """
-YouTube Shorts connector — implements BasePlatformConnector for YouTube Data API v3.
-Uses OAuth 2.0 to upload and publish Shorts.
-
-Real implementation requires:
-  - Google Cloud project with YouTube Data API v3 enabled
-  - OAuth2 credentials configured in YOUTUBE_CLIENT_ID / YOUTUBE_CLIENT_SECRET
+YouTube connector — implements BasePlatformConnector for YouTube Data API v3.
+Publishes both YouTube Shorts (< 60s vertical) and Long-form videos.
 """
 import httpx
 
@@ -15,7 +11,7 @@ from app.core.config import settings
 
 
 class YouTubeService(BasePlatformConnector):
-    """YouTube Shorts connector using YouTube Data API v3."""
+    """YouTube connector supporting both Shorts and Long-Form Video uploads."""
 
     UPLOAD_URL = "https://www.googleapis.com/upload/youtube/v3/videos"
     API_BASE = "https://www.googleapis.com/youtube/v3"
@@ -33,7 +29,7 @@ class YouTubeService(BasePlatformConnector):
             "client_id": settings.YOUTUBE_CLIENT_ID,
             "redirect_uri": settings.YOUTUBE_REDIRECT_URI,
             "response_type": "code",
-            "scope": "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube",
+            "scope": "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile",
             "access_type": "offline",
             "prompt": "consent",
             "state": state,

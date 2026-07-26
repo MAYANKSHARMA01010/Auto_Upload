@@ -15,6 +15,8 @@ class ConnectedAccountResponse(BaseModel):
     user_id: uuid.UUID
     platform: Platform
     username: Optional[str] = None
+    handle: Optional[str] = None
+    email: Optional[str] = None
     platform_user_id: Optional[str] = None
     expires_at: Optional[datetime] = None
     is_active: bool
