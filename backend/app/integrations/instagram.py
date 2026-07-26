@@ -23,7 +23,7 @@ class InstagramService(BasePlatformConnector):
         params = {
             "client_id": settings.INSTAGRAM_CLIENT_ID,
             "redirect_uri": settings.INSTAGRAM_REDIRECT_URI,
-            "scope": "instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments",
+            "scope": "instagram_business_basic,instagram_business_content_publish,instagram_business_manage_messages",
             "response_type": "code",
             "state": state,
         }

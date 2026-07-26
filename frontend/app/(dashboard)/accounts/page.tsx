@@ -15,6 +15,9 @@ import {
   Clock,
   XCircle,
   RefreshCw,
+  Pencil,
+  Check,
+  X,
 } from "lucide-react";
 import {
   FaYoutube,
@@ -379,17 +382,41 @@ function AccountCard({
   platformDef,
   onClick,
   onDelete,
+  onRefresh,
 }: {
   account: ConnectedAccount;
   platformDef: (typeof PLATFORMS)[0];
   onClick: () => void;
   onDelete: () => Promise<void>;
+  onRefresh: () => void;
 }) {
   const Icon = platformDef.icon;
+  const [isEditing, setIsEditing] = useState(false);
+  const [editUsername, setEditUsername] = useState(account.username || "");
+  const [editHandle, setEditHandle] = useState(account.handle || "");
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSaving(true);
+    try {
+      await api.patch(`/accounts/${account.id}`, {
+        username: editUsername,
+        handle: editHandle,
+      });
+      toast.success("Account details updated!");
+      setIsEditing(false);
+      onRefresh();
+    } catch {
+      toast.error("Failed to update account details");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div
-      onClick={onClick}
+      onClick={isEditing ? undefined : onClick}
       className="group relative rounded-2xl border border-border bg-card overflow-hidden cursor-pointer hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200"
     >
       {/* Top accent bar */}
@@ -399,54 +426,109 @@ function AccountCard({
       <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-br ${platformDef.cardAccent} transition-opacity duration-300 pointer-events-none`} />
 
       <div className="relative p-4 space-y-3">
-        {/* Top row: status + delete */}
+        {/* Top row: status + edit + delete */}
         <div className="flex items-center justify-between">
           <Badge variant={account.is_active ? "default" : "destructive"} className="text-[10px]">
             {account.is_active ? "Active" : "Expired"}
           </Badge>
-          <DeleteConfirmDialog
-            account={account}
-            platformName={platformDef.name}
-            onConfirm={onDelete}
-          />
-        </div>
-
-        {/* Platform + account name */}
-        <div className="flex items-center gap-2.5">
-          <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${platformDef.barColor}/20 border border-white/10 shrink-0`}>
-            <Icon className={`h-4 w-4 ${platformDef.barColor === "bg-red-500" ? "text-red-400" : platformDef.barColor === "bg-pink-500" ? "text-pink-400" : platformDef.barColor === "bg-blue-500" ? "text-blue-400" : platformDef.barColor === "bg-sky-500" ? "text-sky-400" : platformDef.barColor === "bg-yellow-400" ? "text-yellow-400" : "text-foreground"}`} />
+          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+              title="Edit Account Details"
+              onClick={() => setIsEditing(!isEditing)}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            <DeleteConfirmDialog
+              account={account}
+              platformName={platformDef.name}
+              onConfirm={onDelete}
+            />
           </div>
-          <div className="min-w-0">
-            <p className="text-xs font-semibold text-muted-foreground">{platformDef.name}</p>
-            <p className="text-sm font-bold text-foreground truncate">{account.username || "Connected Account"}</p>
+        </div>
+
+        {isEditing ? (
+          <div className="space-y-2 pt-1" onClick={(e) => e.stopPropagation()}>
+            <div>
+              <label className="text-[10px] text-muted-foreground font-semibold">Account Name</label>
+              <Input
+                value={editUsername}
+                onChange={(e) => setEditUsername(e.target.value)}
+                placeholder="e.g. Mayank Sharma"
+                className="h-7 text-xs"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-muted-foreground font-semibold">Handle / Username</label>
+              <Input
+                value={editHandle}
+                onChange={(e) => setEditHandle(e.target.value)}
+                placeholder="e.g. @sharmamayank1221"
+                className="h-7 text-xs"
+              />
+            </div>
+            <div className="flex items-center justify-end gap-1.5 pt-1">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 px-2 text-xs"
+                onClick={() => setIsEditing(false)}
+                disabled={saving}
+              >
+                <X className="h-3 w-3 mr-1" /> Cancel
+              </Button>
+              <Button
+                size="sm"
+                className="h-6 px-2 text-xs"
+                onClick={handleSave}
+                disabled={saving}
+              >
+                {saving ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Check className="h-3 w-3 mr-1" />} Save
+              </Button>
+            </div>
           </div>
-        </div>
+        ) : (
+          <>
+            {/* Platform + account name */}
+            <div className="flex items-center gap-2.5">
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${platformDef.barColor}/20 border border-white/10 shrink-0`}>
+                <Icon className={`h-4 w-4 ${platformDef.barColor === "bg-red-500" ? "text-red-400" : platformDef.barColor === "bg-pink-500" ? "text-pink-400" : platformDef.barColor === "bg-blue-500" ? "text-blue-400" : platformDef.barColor === "bg-sky-500" ? "text-sky-400" : platformDef.barColor === "bg-yellow-400" ? "text-yellow-400" : "text-foreground"}`} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-muted-foreground">{platformDef.name}</p>
+                <p className="text-sm font-bold text-foreground truncate">{account.username || "Connected Account"}</p>
+              </div>
+            </div>
 
-        {/* Handle */}
-        {account.handle && (
-          <span className="inline-flex items-center text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-            {account.handle}
-          </span>
+            {/* Handle */}
+            {account.handle && (
+              <span className="inline-flex items-center text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                {account.handle}
+              </span>
+            )}
+
+            {/* Email */}
+            {account.email ? (
+              <p className="text-xs text-muted-foreground truncate">📧 {account.email}</p>
+            ) : account.platform === "youtube" && (
+              <p className="text-[11px] text-amber-500/80 italic">↻ Reconnect to show Gmail</p>
+            )}
+
+            {/* Footer: ID + "View insights" hint */}
+            <div className="flex items-center justify-between pt-1">
+              {account.platform_user_id && (
+                <p className="text-[10px] text-muted-foreground font-mono truncate max-w-[60%]">
+                  {account.platform_user_id.slice(0, 16)}…
+                </p>
+              )}
+              <span className="text-[11px] text-primary/70 font-semibold group-hover:text-primary transition-colors ml-auto">
+                View insights →
+              </span>
+            </div>
+          </>
         )}
-
-        {/* Email */}
-        {account.email ? (
-          <p className="text-xs text-muted-foreground truncate">📧 {account.email}</p>
-        ) : account.platform === "youtube" && (
-          <p className="text-[11px] text-amber-500/80 italic">↻ Reconnect to show Gmail</p>
-        )}
-
-        {/* Footer: ID + "View insights" hint */}
-        <div className="flex items-center justify-between pt-1">
-          {account.platform_user_id && (
-            <p className="text-[10px] text-muted-foreground font-mono truncate max-w-[60%]">
-              {account.platform_user_id.slice(0, 16)}…
-            </p>
-          )}
-          <span className="text-[11px] text-primary/70 font-semibold group-hover:text-primary transition-colors ml-auto">
-            View insights →
-          </span>
-        </div>
       </div>
     </div>
   );
@@ -638,6 +720,7 @@ export default function AccountsPage() {
               platformDef={getPlatformDef(account.platform)}
               onClick={() => setSelectedAccount(account)}
               onDelete={() => handleDisconnect(account.id)}
+              onRefresh={refetch}
             />
           ))
         )}

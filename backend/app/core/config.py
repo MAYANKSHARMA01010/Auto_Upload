@@ -77,6 +77,8 @@ class Settings(BaseSettings):
     INSTAGRAM_CLIENT_ID: str = ""
     INSTAGRAM_CLIENT_SECRET: str = ""
     INSTAGRAM_REDIRECT_URI: str = ""
+    INSTAGRAM_FB_APP_ID: str = ""
+    INSTAGRAM_FB_APP_SECRET: str = ""
 
     FACEBOOK_APP_ID: str = ""
     FACEBOOK_APP_SECRET: str = ""

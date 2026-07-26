@@ -53,10 +53,11 @@ async def sync_account_info(
     """
     import httpx
 
+    # Fetch all YouTube and Instagram connected accounts
     result = await db.execute(
         select(ConnectedAccount).where(
             ConnectedAccount.user_id == current_user.id,
-            ConnectedAccount.platform == Platform.YOUTUBE,
+            ConnectedAccount.platform.in_([Platform.YOUTUBE, Platform.INSTAGRAM]),
         )
     )
     accounts = result.scalars().all()
@@ -69,45 +70,66 @@ async def sync_account_info(
 
             changed = False
 
-            # Fetch Google email if missing
-            if not acc.email:
-                try:
-                    uinfo = await client.get(
-                        "https://www.googleapis.com/oauth2/v2/userinfo",
-                        headers={"Authorization": f"Bearer {acc.access_token}"},
-                        timeout=5,
-                    )
-                    if uinfo.status_code == 200:
-                        email = uinfo.json().get("email", "")
-                        if email:
-                            acc.email = email
-                            changed = True
-                except Exception:
-                    pass
+            if acc.platform == Platform.YOUTUBE:
+                # Fetch Google email if missing
+                if not acc.email:
+                    try:
+                        uinfo = await client.get(
+                            "https://www.googleapis.com/oauth2/v2/userinfo",
+                            headers={"Authorization": f"Bearer {acc.access_token}"},
+                            timeout=5,
+                        )
+                        if uinfo.status_code == 200:
+                            email = uinfo.json().get("email", "")
+                            if email:
+                                acc.email = email
+                                changed = True
+                    except Exception:
+                        pass
 
-            # Fetch handle + channel title if missing
-            if not acc.handle:
-                try:
-                    ch_resp = await client.get(
-                        "https://www.googleapis.com/youtube/v3/channels",
-                        headers={"Authorization": f"Bearer {acc.access_token}"},
-                        params={"part": "snippet", "mine": "true"},
-                        timeout=10,
-                    )
-                    if ch_resp.status_code == 200:
-                        ch_items = ch_resp.json().get("items", [])
-                        if ch_items:
-                            snip = ch_items[0].get("snippet", {})
-                            ch_title = snip.get("title", "")
-                            custom_url = snip.get("customUrl", "")
-                            if ch_title and not acc.username:
-                                acc.username = ch_title
-                                changed = True
-                            if custom_url:
-                                acc.handle = f"@{custom_url.lstrip('@')}"
-                                changed = True
-                except Exception:
-                    pass
+                # Fetch handle + channel title if missing
+                if not acc.handle:
+                    try:
+                        ch_resp = await client.get(
+                            "https://www.googleapis.com/youtube/v3/channels",
+                            headers={"Authorization": f"Bearer {acc.access_token}"},
+                            params={"part": "snippet", "mine": "true"},
+                            timeout=10,
+                        )
+                        if ch_resp.status_code == 200:
+                            ch_items = ch_resp.json().get("items", [])
+                            if ch_items:
+                                snip = ch_items[0].get("snippet", {})
+                                ch_title = snip.get("title", "")
+                                custom_url = snip.get("customUrl", "")
+                                if ch_title and (not acc.username or acc.username == "YouTube Channel"):
+                                    acc.username = ch_title
+                                    changed = True
+                                if custom_url:
+                                    acc.handle = f"@{custom_url.lstrip('@')}"
+                                    changed = True
+                    except Exception:
+                        pass
+
+            elif acc.platform == Platform.INSTAGRAM:
+                if not acc.handle or "Instagram (" in (acc.username or ""):
+                    for endpoint_url, ep_params in [
+                        ("https://graph.instagram.com/v19.0/me", {"fields": "id,username", "access_token": acc.access_token}),
+                        ("https://graph.instagram.com/me", {"fields": "id,username", "access_token": acc.access_token}),
+                        ("https://graph.facebook.com/v19.0/me", {"fields": "id,username,name", "access_token": acc.access_token}),
+                    ]:
+                        try:
+                            profile_resp = await client.get(endpoint_url, params=ep_params, timeout=10)
+                            if profile_resp.status_code == 200:
+                                pdata = profile_resp.json()
+                                ig_username = pdata.get("username", "") or pdata.get("name", "")
+                                if ig_username:
+                                    acc.username = ig_username
+                                    acc.handle = f"@{ig_username.lstrip('@')}"
+                                    changed = True
+                                    break
+                        except Exception:
+                            pass
 
             if changed:
                 updated += 1
@@ -118,6 +140,36 @@ async def sync_account_info(
         await cache_service.delete_pattern(f"user_accounts:{current_user.id}")
 
     return {"synced": updated, "total": len(accounts)}
+
+
+@router.patch("/{account_id}", response_model=ConnectedAccountResponse)
+async def update_account(
+    account_id: uuid.UUID,
+    payload: dict,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update account username or handle manually if needed."""
+    result = await db.execute(
+        select(ConnectedAccount).where(
+            ConnectedAccount.id == account_id,
+            ConnectedAccount.user_id == current_user.id,
+        )
+    )
+    account = result.scalars().first()
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+
+    if "username" in payload:
+        account.username = payload["username"]
+    if "handle" in payload:
+        raw_h = payload["handle"].strip()
+        account.handle = f"@{raw_h.lstrip('@')}" if raw_h else None
+
+    await db.commit()
+    await db.refresh(account)
+    await cache_service.delete_pattern(f"user_accounts:{current_user.id}")
+    return account
 
 
 @router.get("/oauth/{platform}/init", response_model=OAuthInitResponse)
@@ -248,11 +300,31 @@ async def oauth_callback(
                     },
                     timeout=15,
                 )
+                print(f"DEBUG IG TOKEN RESP STATUS: {token_resp.status_code}, BODY: {token_resp.text}")
                 if token_resp.status_code == 200:
                     tdata = token_resp.json()
                     access_token = str(tdata.get("access_token", ""))
                     platform_user_id = str(tdata.get("user_id", ""))
-                    username = f"Instagram ({platform_user_id})"
+                    ig_username = tdata.get("username", "")
+
+                    if not ig_username:
+                        for test_url, test_params in [
+                            ("https://graph.instagram.com/v19.0/me", {"fields": "id,username,account_type", "access_token": access_token}),
+                            ("https://graph.instagram.com/me", {"fields": "id,username", "access_token": access_token}),
+                        ]:
+                            try:
+                                profile_resp = await client.get(test_url, params=test_params, timeout=10)
+                                if profile_resp.status_code == 200:
+                                    pdata = profile_resp.json()
+                                    ig_username = pdata.get("username", "") or pdata.get("name", "")
+                                    if ig_username:
+                                        break
+                            except Exception as e:
+                                pass
+
+                    username = ig_username or f"Instagram ({platform_user_id[:8]})"
+                    handle = f"@{ig_username.lstrip('@')}" if ig_username else ""
+                    email = ""
 
             elif platform == Platform.FACEBOOK:
                 token_resp = await client.get(
@@ -268,7 +340,51 @@ async def oauth_callback(
                 if token_resp.status_code == 200:
                     tdata = token_resp.json()
                     access_token = tdata.get("access_token", "")
-                    username = "Facebook Page"
+                    try:
+                        me_resp = await client.get(
+                            "https://graph.facebook.com/v19.0/me",
+                            params={
+                                "fields": "id,name,email,accounts{id,name,access_token,instagram_business_account{id,username,name}}",
+                                "access_token": access_token,
+                            },
+                            timeout=10,
+                        )
+                        if me_resp.status_code == 200:
+                            mdata = me_resp.json()
+                            platform_user_id = str(mdata.get("id", ""))
+                            username = mdata.get("name", "Facebook Page")
+                            email = mdata.get("email", "")
+
+                            # If a linked Instagram Business Account is present, extract its handle
+                            accounts_data = mdata.get("accounts", {}).get("data", [])
+                            for acc_item in accounts_data:
+                                ig_biz = acc_item.get("instagram_business_account", {})
+                                if ig_biz and ig_biz.get("username"):
+                                    ig_un = ig_biz.get("username")
+                                    # Create or update Instagram account as well
+                                    ig_stmt = select(ConnectedAccount).where(
+                                        ConnectedAccount.user_id == user.id,
+                                        ConnectedAccount.platform == Platform.INSTAGRAM,
+                                        ConnectedAccount.platform_user_id == str(ig_biz.get("id", "")),
+                                    )
+                                    ig_existing = (await db.execute(ig_stmt)).scalar_one_or_none()
+                                    if ig_existing:
+                                        ig_existing.access_token = acc_item.get("access_token", access_token)
+                                        ig_existing.username = ig_un
+                                        ig_existing.handle = f"@{ig_un.lstrip('@')}"
+                                    else:
+                                        db.add(ConnectedAccount(
+                                            user_id=user.id,
+                                            platform=Platform.INSTAGRAM,
+                                            platform_user_id=str(ig_biz.get("id", "")),
+                                            username=ig_un,
+                                            handle=f"@{ig_un.lstrip('@')}",
+                                            access_token=acc_item.get("access_token", access_token),
+                                            is_active=True,
+                                        ))
+                                    break
+                    except Exception as e:
+                        print(f"DEBUG FB ME FETCH ERROR: {e}")
 
             elif platform == Platform.THREADS:
                 token_resp = await client.post(

@@ -123,21 +123,46 @@ Every time you want to use OAuth login, make sure the following redirect URIs ar
 ### Environment Variables:
 - `INSTAGRAM_CLIENT_ID`
 - `INSTAGRAM_CLIENT_SECRET`
-- `INSTAGRAM_REDIRECT_URI` = `https://localhost:8000/api/v1/accounts/oauth/instagram/callback`
+- `INSTAGRAM_REDIRECT_URI` = `http://localhost:8000/api/v1/accounts/oauth/instagram/callback`
 
 ### Step-by-Step Instructions:
 1. Go to [Meta for Developers Portal](https://developers.facebook.com/).
-2. Create App -> Select **Manage messaging & content on Instagram** -> Name: `ClipScheduler Instagram`.
-3. **App Settings -> Basic**:
-   - Set **Privacy Policy URL** to your privacy policy page.
-   - Leave **App domains** empty.
-   - Save Changes.
-4. **Instagram API setup with Instagram login**:
-   - Add permissions: `instagram_business_basic`, `instagram_business_manage_comments`, `instagram_business_manage_messages`.
-   - Add Redirect Callback URL: `https://localhost:8000/api/v1/accounts/oauth/instagram/callback`.
+2. Click **My Apps** → **Create App** → Select **"Manage messaging & content on Instagram"** use case → Name: `ClipScheduler I-IG`.
+3. **App Settings → Basic**:
+   - Set **Privacy Policy URL** (generate one at [privacypolicygenerator.info](https://www.privacypolicygenerator.info/)).
+   - Upload an **App Icon** (1024×1024 PNG).
+   - Click **Save Changes**.
+4. **Use Cases → Customize → Settings** (Instagram API):
+   - Under **Redirect Callback URLs**, add:
+     ```
+     http://localhost:8000/api/v1/accounts/oauth/instagram/callback
+     https://playgroup-pesticide-passport.ngrok-free.dev/api/v1/accounts/oauth/instagram/callback
+     ```
+   - Enable permissions:
+     - `Business Asset User Profile Access` ← Click **`+ Add`** (Top item on Permissions & Features page — required for reading real `@username` & profile picture)
+     - `instagram_business_basic` ← required for account access
+     - `instagram_business_content_publish` ← Click **`+ Add`** (required for posting Reels)
+     - `instagram_business_manage_comments` ← optional
+     - `instagram_business_manage_messages` ← optional
+   - Click **Save**.
 5. Copy **App ID** and **App Secret** into your `backend/.env`.
+6. **IMPORTANT — Publish App for All Users**:
+   - Left sidebar → **Publish** → Review use cases → Click the blue **Publish** button.
+   - Your app will show **"Published"** badge → any Instagram Business/Creator account can now log in.
+   - > ⚠️ If you skip this step, only accounts added under **Testing → Testers** can connect (max 25).
+
+### ⚠️ "Insufficient Developer Role" Error?
+This means your Meta App is still in **Development Mode**. Fix by:
+- **Option A (instant):** Left sidebar → **Testing** → Add the Instagram account as a Tester.
+- **Option B (permanent):** Left sidebar → **Publish** → Click **Publish** button → all users can log in.
+
+### ⚠️ "Instagram Account Not Supported" or Auth Fails?
+Instagram OAuth (`instagram_business_basic`) only works with **Business** or **Creator** accounts.
+Personal accounts must be switched first:
+> Instagram App → **Settings → Account → Switch to Professional Account → Creator or Business**
 
 ---
+
 
 ## 3. Facebook Reels (Meta for Developers)
 
