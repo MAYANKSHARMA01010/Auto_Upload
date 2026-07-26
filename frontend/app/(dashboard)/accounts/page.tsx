@@ -3,12 +3,32 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Link as LinkIcon, Loader2, Plus, Trash2, AlertTriangle } from "lucide-react";
+import Link from "next/link";
+import {
+  Loader2,
+  Plus,
+  Trash2,
+  AlertTriangle,
+  ArrowLeft,
+  BarChart2,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  RefreshCw,
+} from "lucide-react";
+import {
+  FaYoutube,
+  FaInstagram,
+  FaFacebook,
+  FaTiktok,
+  FaXTwitter,
+  FaSnapchat,
+  FaThreads,
+} from "react-icons/fa6";
 
 import { api } from "@/lib/axios";
 import { ConnectedAccount } from "@/types";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -21,18 +41,85 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-import { FaYoutube, FaInstagram, FaFacebook, FaTiktok, FaThreads, FaXTwitter } from "react-icons/fa6";
-
+// ─── Platform definitions ──────────────────────────────────────────────────────
 const PLATFORMS = [
-  { id: "youtube", name: "YouTube", subtitle: "", color: "bg-red-500", textColor: "text-red-500", icon: FaYoutube },
-  { id: "instagram", name: "Instagram", subtitle: "Reels & Posts", color: "bg-pink-500", textColor: "text-pink-500", icon: FaInstagram },
-  { id: "facebook", name: "Facebook Page", subtitle: "Reels & Videos", color: "bg-blue-500", textColor: "text-blue-500", icon: FaFacebook },
-  { id: "tiktok", name: "TikTok", subtitle: "Shorts & Videos", color: "bg-neutral-900 dark:bg-neutral-100", textColor: "text-neutral-900 dark:text-neutral-100", icon: FaTiktok },
-  { id: "threads", name: "Threads", subtitle: "Posts & Media", color: "bg-neutral-800 dark:bg-neutral-200", textColor: "text-neutral-800 dark:text-neutral-200", icon: FaThreads },
-  { id: "x", name: "Twitter / X", subtitle: "Posts & Videos", color: "bg-neutral-900 dark:bg-neutral-100", textColor: "text-neutral-900 dark:text-neutral-100", icon: FaXTwitter },
+  {
+    id: "all",
+    name: "All",
+    icon: BarChart2,
+    pill: "border-border text-muted-foreground bg-muted/40 hover:bg-muted",
+    activePill: "border-primary/60 bg-primary/15 text-primary",
+    cardAccent: "bg-gradient-to-br from-primary/20 to-primary/5",
+    barColor: "bg-primary",
+  },
+  {
+    id: "youtube",
+    name: "YouTube",
+    icon: FaYoutube,
+    pill: "border-red-400/30 text-red-400 bg-red-400/10 hover:bg-red-400/20",
+    activePill: "border-red-400/70 bg-red-500/20 text-red-300",
+    cardAccent: "from-red-500/20 to-red-500/5",
+    barColor: "bg-red-500",
+  },
+  {
+    id: "instagram",
+    name: "Instagram",
+    icon: FaInstagram,
+    pill: "border-pink-400/30 text-pink-400 bg-pink-400/10 hover:bg-pink-400/20",
+    activePill: "border-pink-400/70 bg-pink-500/20 text-pink-300",
+    cardAccent: "from-pink-500/20 to-pink-500/5",
+    barColor: "bg-pink-500",
+  },
+  {
+    id: "tiktok",
+    name: "TikTok",
+    icon: FaTiktok,
+    pill: "border-border text-foreground bg-muted/40 hover:bg-muted",
+    activePill: "border-border bg-muted text-foreground",
+    cardAccent: "from-neutral-700/20 to-neutral-700/5",
+    barColor: "bg-neutral-400",
+  },
+  {
+    id: "facebook",
+    name: "Facebook",
+    icon: FaFacebook,
+    pill: "border-blue-400/30 text-blue-400 bg-blue-400/10 hover:bg-blue-400/20",
+    activePill: "border-blue-400/70 bg-blue-500/20 text-blue-300",
+    cardAccent: "from-blue-500/20 to-blue-500/5",
+    barColor: "bg-blue-500",
+  },
+  {
+    id: "x",
+    name: "Twitter (X)",
+    icon: FaXTwitter,
+    pill: "border-sky-400/30 text-sky-400 bg-sky-400/10 hover:bg-sky-400/20",
+    activePill: "border-sky-400/70 bg-sky-500/20 text-sky-300",
+    cardAccent: "from-sky-500/20 to-sky-500/5",
+    barColor: "bg-sky-500",
+  },
+  {
+    id: "snapchat",
+    name: "Snapchat",
+    icon: FaSnapchat,
+    pill: "border-yellow-400/30 text-yellow-400 bg-yellow-400/10 hover:bg-yellow-400/20",
+    activePill: "border-yellow-400/70 bg-yellow-500/20 text-yellow-300",
+    cardAccent: "from-yellow-500/20 to-yellow-500/5",
+    barColor: "bg-yellow-400",
+  },
+  {
+    id: "threads",
+    name: "Threads",
+    icon: FaThreads,
+    pill: "border-border text-foreground bg-muted/40 hover:bg-muted",
+    activePill: "border-border bg-muted text-foreground",
+    cardAccent: "from-neutral-600/20 to-neutral-600/5",
+    barColor: "bg-neutral-400",
+  },
 ];
 
-// Delete Confirmation Dialog
+const CONNECTABLE_PLATFORMS = PLATFORMS.filter((p) => p.id !== "all");
+
+// ─── Delete Confirmation Dialog ────────────────────────────────────────────────
 interface DeleteConfirmDialogProps {
   account: ConnectedAccount;
   platformName: string;
@@ -50,11 +137,8 @@ function DeleteConfirmDialog({ account, platformName, onConfirm }: DeleteConfirm
 
   const handleOpen = (o: boolean) => {
     setOpen(o);
-    if (!o) {
-      setConfirmText("");
-    } else {
-      setTimeout(() => inputRef.current?.focus(), 120);
-    }
+    if (!o) setConfirmText("");
+    else setTimeout(() => inputRef.current?.focus(), 120);
   };
 
   const handleDelete = async () => {
@@ -71,27 +155,24 @@ function DeleteConfirmDialog({ account, platformName, onConfirm }: DeleteConfirm
   return (
     <Dialog open={open} onOpenChange={handleOpen}>
       <DialogTrigger render={
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-muted-foreground hover:text-destructive -mr-2 -mt-2"
+        <button
+          className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
           aria-label="Disconnect account"
+          onClick={(e) => e.stopPropagation()}
         />
       }>
-        <Trash2 className="h-4 w-4" />
+        <Trash2 className="h-3.5 w-3.5" />
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" onClick={(e) => e.stopPropagation()}>
         <DialogHeader>
           <div className="flex items-center gap-3 mb-1">
             <span className="flex items-center justify-center w-10 h-10 rounded-full bg-destructive/10 text-destructive shrink-0">
               <AlertTriangle className="h-5 w-5" />
             </span>
             <div>
-              <DialogTitle className="text-base">Disconnect {platformName} account?</DialogTitle>
-              <DialogDescription className="text-xs mt-0.5">
-                This action cannot be undone.
-              </DialogDescription>
+              <DialogTitle className="text-base">Disconnect {platformName}?</DialogTitle>
+              <DialogDescription className="text-xs mt-0.5">This action cannot be undone.</DialogDescription>
             </div>
           </div>
         </DialogHeader>
@@ -99,21 +180,17 @@ function DeleteConfirmDialog({ account, platformName, onConfirm }: DeleteConfirm
         <div className="space-y-4 mt-2">
           <div className="rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 space-y-0.5">
             <p className="text-sm font-semibold text-foreground">{account.username || "Connected Account"}</p>
-            {account.handle && (
-              <p className="text-xs text-primary font-medium">{account.handle}</p>
-            )}
-            {account.email && (
-              <p className="text-xs text-muted-foreground">📧 {account.email}</p>
-            )}
+            {account.handle && <p className="text-xs text-primary font-medium">{account.handle}</p>}
+            {account.email && <p className="text-xs text-muted-foreground">📧 {account.email}</p>}
           </div>
 
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">
-              To confirm, type{" "}
-              <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono text-foreground font-bold select-all">
+              Type{" "}
+              <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono text-foreground font-bold">
                 {requiredPhrase}
               </code>{" "}
-              below:
+              to confirm:
             </p>
             <Input
               ref={inputRef}
@@ -133,29 +210,12 @@ function DeleteConfirmDialog({ account, platformName, onConfirm }: DeleteConfirm
             />
           </div>
 
-          <div className="flex gap-3 pt-1">
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={() => handleOpen(false)}
-              disabled={isDeleting}
-            >
+          <div className="flex gap-3">
+            <Button variant="outline" className="flex-1" onClick={() => handleOpen(false)} disabled={isDeleting}>
               Cancel
             </Button>
-            <Button
-              variant="destructive"
-              className="flex-1"
-              onClick={handleDelete}
-              disabled={!isMatch || isDeleting}
-            >
-              {isDeleting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Disconnecting...
-                </>
-              ) : (
-                "Disconnect Account"
-              )}
+            <Button variant="destructive" className="flex-1" onClick={handleDelete} disabled={!isMatch || isDeleting}>
+              {isDeleting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Disconnecting…</> : "Disconnect Account"}
             </Button>
           </div>
         </div>
@@ -164,8 +224,238 @@ function DeleteConfirmDialog({ account, platformName, onConfirm }: DeleteConfirm
   );
 }
 
-// Main Page
+// ─── Account Insight View (drill-down) ────────────────────────────────────────
+function AccountInsightView({
+  account,
+  platformDef,
+  onBack,
+}: {
+  account: ConnectedAccount;
+  platformDef: (typeof PLATFORMS)[0];
+  onBack: () => void;
+}) {
+  const Icon = platformDef.icon;
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["account-insight", account.id],
+    queryFn: async () => {
+      const res = await api.get(
+        `/analytics/social-insights?platform=${account.platform}&account_id=${account.id}`
+      );
+      return res.data;
+    },
+    staleTime: 60_000,
+  });
+
+  const stats = data?.stats ?? { total_posts: 0, published: 0, scheduled: 0, failed: 0 };
+  const videos = data?.videos ?? [];
+
+  return (
+    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-200">
+      {/* Back + header */}
+      <div className="flex items-center gap-4">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors group"
+        >
+          <ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
+          Back
+        </button>
+        <div className="h-5 w-px bg-border" />
+        <div className="flex items-center gap-2">
+          <Icon className={`h-5 w-5 ${platformDef.activePill.includes("red") ? "text-red-400" : "text-primary"}`} />
+          <div>
+            <p className="text-sm font-bold text-foreground">{account.username || "Account"}</p>
+            {account.handle && <p className="text-xs text-primary">{account.handle}</p>}
+          </div>
+        </div>
+        {account.email && (
+          <span className="ml-auto text-xs text-muted-foreground hidden sm:block">📧 {account.email}</span>
+        )}
+      </div>
+
+      {/* Stats grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: "Total Posts", value: stats.total_posts, icon: BarChart2, color: "text-foreground" },
+          { label: "Published", value: stats.published, icon: CheckCircle2, color: "text-emerald-400" },
+          { label: "Scheduled", value: stats.scheduled, icon: Clock, color: "text-primary" },
+          { label: "Failed", value: stats.failed, icon: XCircle, color: "text-rose-400" },
+        ].map(({ label, value, icon: StatIcon, color }) => (
+          <div
+            key={label}
+            className="rounded-2xl border border-border bg-card p-4 space-y-1"
+          >
+            <div className="flex items-center gap-1.5">
+              <StatIcon className={`h-3.5 w-3.5 ${color}`} />
+              <p className={`text-[11px] font-semibold uppercase tracking-wider ${color}`}>{label}</p>
+            </div>
+            {isLoading ? (
+              <Skeleton className="h-7 w-12" />
+            ) : (
+              <p className={`text-2xl font-black ${color}`}>{value}</p>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Posts table */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+            Posts & Video Dispatch Log ({videos.length})
+          </h3>
+          {videos.length > 0 && (
+            <Link href="/shorts-factory" className="text-xs text-primary hover:underline font-semibold">
+              + Dispatch New
+            </Link>
+          )}
+        </div>
+
+        {isLoading ? (
+          <div className="h-32 rounded-2xl bg-card border border-border animate-pulse" />
+        ) : videos.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border bg-card p-8 text-center space-y-3">
+            <p className="text-sm font-semibold text-foreground">No posts dispatched yet</p>
+            <p className="text-xs text-muted-foreground">Schedule or publish via Shorts Factory to see analytics here.</p>
+            <Link
+              href="/shorts-factory"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-xs font-semibold hover:bg-primary/90 transition-all"
+            >
+              Go to Shorts Factory
+            </Link>
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-border bg-card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-border bg-muted/40 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    <th className="py-3 px-4">Title</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4">Scheduled</th>
+                    <th className="py-3 px-4 text-right">Published</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60 text-xs">
+                  {videos.map((vid: any) => (
+                    <tr key={vid.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="py-3 px-4 font-semibold text-foreground">{vid.title}</td>
+                      <td className="py-3 px-4">
+                        <span
+                          className={[
+                            "px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider border",
+                            vid.status === "published"
+                              ? "bg-emerald-400/10 text-emerald-400 border-emerald-400/20"
+                              : vid.status === "scheduled"
+                              ? "bg-primary/10 text-primary border-primary/20"
+                              : "bg-rose-400/10 text-rose-400 border-rose-400/20",
+                          ].join(" ")}
+                        >
+                          {vid.status}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 font-mono text-[11px] text-muted-foreground">
+                        {vid.scheduled_at ? new Date(vid.scheduled_at).toLocaleString() : "Immediate"}
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono text-[11px] text-muted-foreground">
+                        {vid.published_at ? new Date(vid.published_at).toLocaleString() : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Account Card ─────────────────────────────────────────────────────────────
+function AccountCard({
+  account,
+  platformDef,
+  onClick,
+  onDelete,
+}: {
+  account: ConnectedAccount;
+  platformDef: (typeof PLATFORMS)[0];
+  onClick: () => void;
+  onDelete: () => Promise<void>;
+}) {
+  const Icon = platformDef.icon;
+
+  return (
+    <div
+      onClick={onClick}
+      className="group relative rounded-2xl border border-border bg-card overflow-hidden cursor-pointer hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200"
+    >
+      {/* Top accent bar */}
+      <div className={`h-1 w-full ${platformDef.barColor}`} />
+
+      {/* Gradient bg glow */}
+      <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-br ${platformDef.cardAccent} transition-opacity duration-300 pointer-events-none`} />
+
+      <div className="relative p-4 space-y-3">
+        {/* Top row: status + delete */}
+        <div className="flex items-center justify-between">
+          <Badge variant={account.is_active ? "default" : "destructive"} className="text-[10px]">
+            {account.is_active ? "Active" : "Expired"}
+          </Badge>
+          <DeleteConfirmDialog
+            account={account}
+            platformName={platformDef.name}
+            onConfirm={onDelete}
+          />
+        </div>
+
+        {/* Platform + account name */}
+        <div className="flex items-center gap-2.5">
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${platformDef.barColor}/20 border border-white/10 shrink-0`}>
+            <Icon className={`h-4 w-4 ${platformDef.barColor === "bg-red-500" ? "text-red-400" : platformDef.barColor === "bg-pink-500" ? "text-pink-400" : platformDef.barColor === "bg-blue-500" ? "text-blue-400" : platformDef.barColor === "bg-sky-500" ? "text-sky-400" : platformDef.barColor === "bg-yellow-400" ? "text-yellow-400" : "text-foreground"}`} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-muted-foreground">{platformDef.name}</p>
+            <p className="text-sm font-bold text-foreground truncate">{account.username || "Connected Account"}</p>
+          </div>
+        </div>
+
+        {/* Handle */}
+        {account.handle && (
+          <span className="inline-flex items-center text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+            {account.handle}
+          </span>
+        )}
+
+        {/* Email */}
+        {account.email ? (
+          <p className="text-xs text-muted-foreground truncate">📧 {account.email}</p>
+        ) : account.platform === "youtube" && (
+          <p className="text-[11px] text-amber-500/80 italic">↻ Reconnect to show Gmail</p>
+        )}
+
+        {/* Footer: ID + "View insights" hint */}
+        <div className="flex items-center justify-between pt-1">
+          {account.platform_user_id && (
+            <p className="text-[10px] text-muted-foreground font-mono truncate max-w-[60%]">
+              {account.platform_user_id.slice(0, 16)}…
+            </p>
+          )}
+          <span className="text-[11px] text-primary/70 font-semibold group-hover:text-primary transition-colors ml-auto">
+            View insights →
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 export default function AccountsPage() {
+  const [activePlatform, setActivePlatform] = useState("all");
+  const [selectedAccount, setSelectedAccount] = useState<ConnectedAccount | null>(null);
   const [isConnecting, setIsConnecting] = useState<string | null>(null);
 
   const { data: accounts, isLoading, refetch } = useQuery<ConnectedAccount[]>({
@@ -186,19 +476,15 @@ export default function AccountsPage() {
       toast.success(`${platform.charAt(0).toUpperCase() + platform.slice(1)} account connected!`);
     } else if (error === "no_handle") {
       toast.error(
-        "YouTube account not connected: Your channel doesn't have a custom handle (@handle) yet. Set one in YouTube Studio first.",
+        "YouTube account not connected: Your channel needs a custom handle (@handle). Set one in YouTube Studio first.",
         { duration: 8000 }
       );
     }
 
-    if (status || error) {
-      window.history.replaceState({}, "", window.location.pathname);
-    }
+    if (status || error) window.history.replaceState({}, "", window.location.pathname);
 
-    api.post("/accounts/sync").then(() => {
-      refetch();
-    }).catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    api.post("/accounts/sync").then(() => refetch()).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleConnect = async (platformId: string) => {
@@ -207,34 +493,51 @@ export default function AccountsPage() {
       const res = await api.get(`/accounts/oauth/${platformId}/init`);
       window.location.href = res.data.authorization_url;
     } catch {
-      toast.error(`Failed to initiate connection for ${platformId}`);
+      toast.error(`Failed to connect ${platformId}`);
       setIsConnecting(null);
     }
   };
 
   const handleDisconnect = async (accountId: string) => {
     await api.delete(`/accounts/${accountId}`);
-    toast.success("Account disconnected successfully");
+    toast.success("Account disconnected");
+    if (selectedAccount?.id === accountId) setSelectedAccount(null);
     refetch();
   };
 
-  const getPlatformDetails = (platformId: string) =>
-    PLATFORMS.find((p) => p.id === platformId) || {
-      name: platformId,
-      subtitle: "",
-      color: "bg-gray-500",
-      textColor: "text-gray-500",
-      icon: LinkIcon,
-    };
+  const getPlatformDef = (platformId: string) =>
+    PLATFORMS.find((p) => p.id === platformId) || PLATFORMS[0];
 
+  // Filter accounts by active platform tab
+  const filteredAccounts =
+    activePlatform === "all" ? accounts ?? [] : (accounts ?? []).filter((a) => a.platform === activePlatform);
+
+  // ── Detail view ──
+  if (selectedAccount) {
+    return (
+      <div className="p-6 max-w-5xl mx-auto pb-12">
+        <AccountInsightView
+          account={selectedAccount}
+          platformDef={getPlatformDef(selectedAccount.platform)}
+          onBack={() => setSelectedAccount(null)}
+        />
+      </div>
+    );
+  }
+
+  // ── List view ──
   return (
-    <div className="p-6 space-y-6 max-w-5xl mx-auto pb-12">
-      <div className="flex items-center justify-between">
+    <div className="p-6 space-y-6 max-w-6xl mx-auto pb-12">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Connected Accounts</h2>
-          <p className="text-muted-foreground mt-1">Manage your social media platform connections.</p>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Click any account to view its analytics & post history.
+          </p>
         </div>
 
+        {/* Connect Platform Dialog */}
         <Dialog>
           <DialogTrigger render={<Button id="connect-platform-btn" />}>
             <Plus className="mr-2 h-4 w-4" />
@@ -243,30 +546,27 @@ export default function AccountsPage() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Connect New Platform</DialogTitle>
-              <DialogDescription>
-                Select a platform to authorize ClipScheduler to post on your behalf.
-              </DialogDescription>
+              <DialogDescription>Select a platform to authorize ClipScheduler.</DialogDescription>
             </DialogHeader>
-            <div className="grid grid-cols-2 gap-4 py-4">
-              {PLATFORMS.map((platform) => {
-                const connectionCount = accounts?.filter((a) => a.platform === platform.id).length || 0;
+            <div className="grid grid-cols-2 gap-3 py-4">
+              {CONNECTABLE_PLATFORMS.map((platform) => {
+                const count = accounts?.filter((a) => a.platform === platform.id).length || 0;
+                const Icon = platform.icon;
                 return (
                   <Button
                     key={platform.id}
                     variant="outline"
-                    className="h-24 flex flex-col items-center justify-center gap-2 relative"
+                    className="h-20 flex flex-col items-center justify-center gap-1.5"
                     onClick={() => handleConnect(platform.id)}
                     disabled={isConnecting === platform.id}
                   >
                     {isConnecting === platform.id ? (
-                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                     ) : (
-                      <platform.icon className={`h-8 w-8 ${platform.textColor}`} />
+                      <Icon className={`h-6 w-6 ${platform.pill.includes("red") ? "text-red-400" : platform.pill.includes("pink") ? "text-pink-400" : platform.pill.includes("blue-4") ? "text-blue-400" : platform.pill.includes("sky") ? "text-sky-400" : platform.pill.includes("yellow") ? "text-yellow-400" : "text-foreground"}`} />
                     )}
-                    <span className="font-medium">{platform.name}</span>
-                    {connectionCount > 0 && (
-                      <span className="text-xs text-muted-foreground">{connectionCount} Connected</span>
-                    )}
+                    <span className="text-sm font-medium">{platform.name}</span>
+                    {count > 0 && <span className="text-[10px] text-muted-foreground">{count} connected</span>}
                   </Button>
                 );
               })}
@@ -275,93 +575,71 @@ export default function AccountsPage() {
         </Dialog>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {/* Platform filter tabs */}
+      <div className="flex flex-wrap gap-2">
+        {PLATFORMS.map((p) => {
+          const Icon = p.icon;
+          const isActive = activePlatform === p.id;
+          const count = p.id === "all" ? (accounts?.length ?? 0) : (accounts?.filter((a) => a.platform === p.id).length ?? 0);
+          return (
+            <button
+              key={p.id}
+              onClick={() => setActivePlatform(p.id)}
+              className={[
+                "flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-semibold transition-all duration-200",
+                isActive ? p.activePill : p.pill,
+              ].join(" ")}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              <span>{p.name}</span>
+              {count > 0 && (
+                <span className={`ml-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[10px] font-bold ${isActive ? "bg-white/20" : "bg-black/10 dark:bg-white/10"}`}>
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Account cards grid */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {isLoading ? (
           Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i}>
-              <CardContent className="p-6">
-                <Skeleton className="h-12 w-12 rounded-full mb-4" />
-                <Skeleton className="h-4 w-32 mb-2" />
-                <Skeleton className="h-3 w-24" />
-              </CardContent>
-            </Card>
+            <div key={i} className="rounded-2xl border border-border bg-card p-4 space-y-3">
+              <Skeleton className="h-4 w-16" />
+              <div className="flex items-center gap-2.5">
+                <Skeleton className="h-9 w-9 rounded-xl" />
+                <div className="space-y-1.5">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+              </div>
+              <Skeleton className="h-3 w-24 rounded-full" />
+            </div>
           ))
-        ) : accounts?.length === 0 ? (
-          <div className="col-span-full flex h-[300px] flex-col items-center justify-center rounded-md border border-dashed text-center">
-            <LinkIcon className="mx-auto h-12 w-12 text-muted-foreground/50" />
-            <h3 className="mt-4 text-lg font-semibold">No accounts connected</h3>
-            <p className="mb-4 text-sm text-muted-foreground">
-              Connect a social media account to start scheduling posts.
-            </p>
+        ) : filteredAccounts.length === 0 ? (
+          <div className="col-span-full flex h-[260px] flex-col items-center justify-center rounded-2xl border border-dashed border-border text-center gap-3">
+            <BarChart2 className="h-10 w-10 text-muted-foreground/40" />
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                {activePlatform === "all" ? "No accounts connected yet" : `No ${getPlatformDef(activePlatform).name} accounts`}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Connect a platform to start scheduling and tracking posts.
+              </p>
+            </div>
           </div>
         ) : (
-          accounts?.map((account) => {
-            const platform = getPlatformDetails(account.platform);
-            return (
-              <Card key={account.id} className="relative overflow-hidden">
-                <div className={`absolute top-0 left-0 w-1 h-full ${platform.color}`} />
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start">
-                    <Badge variant={account.is_active ? "default" : "destructive"}>
-                      {account.is_active ? "Active" : "Expired"}
-                    </Badge>
-
-                    <DeleteConfirmDialog
-                      account={account}
-                      platformName={platform.name}
-                      onConfirm={() => handleDisconnect(account.id)}
-                    />
-                  </div>
-
-                  <CardTitle className={`text-xl mt-2 flex items-center justify-between ${platform.textColor}`}>
-                    <div className="flex items-center gap-2">
-                      <platform.icon className="h-5 w-5" />
-                      <span>{platform.name}</span>
-                    </div>
-                    {platform.subtitle && (
-                      <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded bg-muted text-muted-foreground">
-                        {platform.subtitle}
-                      </span>
-                    )}
-                  </CardTitle>
-
-                  <CardDescription className="mt-2 space-y-1.5">
-                    <span className="font-semibold text-foreground text-sm block leading-snug">
-                      {account.username || "Connected Account"}
-                    </span>
-
-                    {account.handle && (
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                        {account.handle}
-                      </span>
-                    )}
-
-                    {account.email ? (
-                      <span className="text-xs text-muted-foreground block">
-                        📧 {account.email}
-                      </span>
-                    ) : account.platform === "youtube" && (
-                      <span className="text-[11px] text-amber-500/80 block italic">
-                        ↻ Reconnect to show Gmail
-                      </span>
-                    )}
-
-                    {account.platform_user_id && (
-                      <span className="text-[11px] text-muted-foreground block font-mono">
-                        ID: {account.platform_user_id}
-                      </span>
-                    )}
-                  </CardDescription>
-                </CardHeader>
-
-                <CardContent>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Added on {new Date(account.created_at).toLocaleDateString()}
-                  </p>
-                </CardContent>
-              </Card>
-            );
-          })
+          filteredAccounts.map((account) => (
+            <AccountCard
+              key={account.id}
+              account={account}
+              platformDef={getPlatformDef(account.platform)}
+              onClick={() => setSelectedAccount(account)}
+              onDelete={() => handleDisconnect(account.id)}
+            />
+          ))
         )}
       </div>
     </div>
