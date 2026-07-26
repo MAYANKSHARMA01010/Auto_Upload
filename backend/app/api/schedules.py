@@ -7,6 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.cache import cache_service
 from app.core.dependencies import get_current_user, get_db
 from app.models.activity_log import ActivityAction
 from app.models.scheduled_post import Platform, PostStatus
@@ -41,6 +42,10 @@ async def bulk_create_posts(
         resource_id=str(data.video_id),
     )
 
+    await cache_service.delete_pattern(f"user_schedules:{current_user.id}")
+    await cache_service.delete_pattern(f"user_analytics:{current_user.id}")
+    await cache_service.delete(f"user_analytics_overview:{current_user.id}")
+
     return [ScheduledPostResponse.model_validate(p) for p in posts]
 
 
@@ -52,6 +57,8 @@ async def create_post(
 ):
     """Create a single scheduled post."""
     post = await PostService.create(db, current_user.id, data)
+    await cache_service.delete_pattern(f"user_schedules:{current_user.id}")
+    await cache_service.delete(f"user_analytics_overview:{current_user.id}")
     return ScheduledPostResponse.model_validate(post)
 
 
@@ -64,10 +71,19 @@ async def list_posts(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """List scheduled posts with optional filters."""
+    """List scheduled posts with optional filters (cached)."""
+    st_val = status.value if status else "all"
+    pl_val = platform.value if platform else "all"
+    cache_key = f"user_schedules:{current_user.id}:{st_val}:{pl_val}:{skip}:{limit}"
+    cached = await cache_service.get(cache_key)
+    if cached is not None:
+        return [ScheduledPostResponse.model_validate(p) for p in cached]
+
     posts = await PostService.list_by_user(
         db, current_user.id, status=status, platform=platform, skip=skip, limit=limit
     )
+    res_data = [ScheduledPostResponse.model_validate(p).model_dump(mode="json") for p in posts]
+    await cache_service.set(cache_key, res_data, ttl_seconds=300)
     return [ScheduledPostResponse.model_validate(p) for p in posts]
 
 
@@ -96,6 +112,8 @@ async def update_post(
     if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
     post = await PostService.update(db, post, data)
+    await cache_service.delete_pattern(f"user_schedules:{current_user.id}")
+    await cache_service.delete(f"user_analytics_overview:{current_user.id}")
     return ScheduledPostResponse.model_validate(post)
 
 
@@ -110,6 +128,8 @@ async def delete_post(
     if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
     await PostService.delete(db, post)
+    await cache_service.delete_pattern(f"user_schedules:{current_user.id}")
+    await cache_service.delete(f"user_analytics_overview:{current_user.id}")
     await ActivityLogService.log(
         db,
         user_id=current_user.id,
@@ -136,6 +156,8 @@ async def cancel_post(
             detail=f"Cannot cancel a post with status '{post.status}'",
         )
     post = await PostService.update_status(db, post, PostStatus.CANCELLED)
+    await cache_service.delete_pattern(f"user_schedules:{current_user.id}")
+    await cache_service.delete(f"user_analytics_overview:{current_user.id}")
     await ActivityLogService.log(
         db,
         user_id=current_user.id,
@@ -164,6 +186,8 @@ async def retry_post(
         )
     post.retry_count = 0
     post = await PostService.update_status(db, post, PostStatus.SCHEDULED)
+    await cache_service.delete_pattern(f"user_schedules:{current_user.id}")
+    await cache_service.delete(f"user_analytics_overview:{current_user.id}")
     await ActivityLogService.log(
         db,
         user_id=current_user.id,

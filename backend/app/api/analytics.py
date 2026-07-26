@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.cache import cache_service
 from app.core.dependencies import get_current_user, get_db
 from app.models.connected_account import ConnectedAccount
 from app.models.scheduled_post import Platform, PostStatus, ScheduledPost
@@ -23,7 +24,12 @@ async def get_overview(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Return overall stats and platform breakdown for the dashboard."""
+    """Return overall stats and platform breakdown for the dashboard (cached)."""
+    cache_key = f"user_analytics_overview:{current_user.id}"
+    cached = await cache_service.get(cache_key)
+    if cached is not None:
+        return OverallStats.model_validate(cached)
+
     uid = current_user.id
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     today_end = today_start + timedelta(days=1)
@@ -72,7 +78,7 @@ async def get_overview(
             )
         )
 
-    return OverallStats(
+    res = OverallStats(
         total_videos=total_videos,
         total_posts=total_posts,
         published=published,
@@ -82,6 +88,8 @@ async def get_overview(
         upcoming_today=upcoming_today,
         platform_breakdown=platform_stats,
     )
+    await cache_service.set(cache_key, res.model_dump(mode="json"), ttl_seconds=300)
+    return res
 
 
 @router.get("/timeline", response_model=list[TimelinePoint])
@@ -90,7 +98,12 @@ async def get_timeline(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Return daily post counts for the last N days."""
+    """Return daily post counts for the last N days (cached)."""
+    cache_key = f"user_analytics_timeline:{current_user.id}:{days}"
+    cached = await cache_service.get(cache_key)
+    if cached is not None:
+        return [TimelinePoint.model_validate(p) for p in cached]
+
     start = datetime.now(timezone.utc) - timedelta(days=days)
     timeline = []
 
@@ -119,6 +132,8 @@ async def get_timeline(
             )
         )
 
+    res_data = [t.model_dump(mode="json") for t in timeline]
+    await cache_service.set(cache_key, res_data, ttl_seconds=300)
     return timeline
 
 

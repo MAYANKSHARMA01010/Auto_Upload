@@ -21,10 +21,15 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+from app.core.cache import cache_service
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan: startup and shutdown hooks."""
     logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
+
+    # Initialize cache service (Redis or Async In-Memory fallback)
+    await cache_service.initialize(redis_url=settings.active_redis_url)
 
     # Initialize database tables (dev only — use Alembic for production)
     if settings.ENVIRONMENT == "development":
@@ -41,6 +46,7 @@ async def lifespan(app: FastAPI):
 
     # Shutdown
     stop_scheduler()
+    await cache_service.close()
     await close_db()
     logger.info(f"{settings.APP_NAME} shut down gracefully")
 
@@ -55,6 +61,17 @@ app = FastAPI(
     openapi_url="/openapi.json",
     lifespan=lifespan,
 )
+
+# ── Security Headers Middleware (Helmet equivalent) ───────────────────────
+@app.middleware("http")
+async def add_security_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    return response
 
 # CORS middleware
 app.add_middleware(

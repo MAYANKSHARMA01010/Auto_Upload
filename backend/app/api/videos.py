@@ -6,6 +6,7 @@ import uuid
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.cache import cache_service
 from app.core.dependencies import get_current_user, get_db
 from app.models.activity_log import ActivityAction
 from app.models.user import User
@@ -58,6 +59,9 @@ async def upload_video(
         resource_type="video",
         resource_id=str(video.id),
     )
+
+    await cache_service.delete_pattern(f"user_videos:{current_user.id}")
+    await cache_service.delete(f"user_analytics_overview:{current_user.id}")
 
     return VideoUploadResponse(video=VideoResponse.model_validate(video))
 
@@ -117,8 +121,15 @@ async def list_videos(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """List all videos uploaded by the current user."""
+    """List all videos uploaded by the current user (cached)."""
+    cache_key = f"user_videos:{current_user.id}:{skip}:{limit}"
+    cached = await cache_service.get(cache_key)
+    if cached is not None:
+        return [VideoResponse.model_validate(v) for v in cached]
+
     videos = await VideoService.list_by_user(db, current_user.id, skip=skip, limit=limit)
+    res_data = [VideoResponse.model_validate(v).model_dump(mode="json") for v in videos]
+    await cache_service.set(cache_key, res_data, ttl_seconds=300)
     return [VideoResponse.model_validate(v) for v in videos]
 
 
@@ -146,3 +157,5 @@ async def delete_video(
     if not video:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Video not found")
     await VideoService.delete(db, video)
+    await cache_service.delete_pattern(f"user_videos:{current_user.id}")
+    await cache_service.delete(f"user_analytics_overview:{current_user.id}")

@@ -17,6 +17,8 @@ from app.models.user import User
 from app.schemas.account import ConnectedAccountResponse, OAuthInitResponse
 from app.services.activity_log_service import ActivityLogService
 
+from app.core.cache import cache_service
+
 router = APIRouter(prefix="/accounts", tags=["Connected Accounts"])
 
 
@@ -25,11 +27,18 @@ async def list_accounts(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """List all connected platform accounts for the current user."""
+    """List all connected platform accounts for the current user (with Cache)."""
+    cache_key = f"user_accounts:{current_user.id}"
+    cached_data = await cache_service.get(cache_key)
+    if cached_data is not None:
+        return [ConnectedAccountResponse.model_validate(a) for a in cached_data]
+
     result = await db.execute(
         select(ConnectedAccount).where(ConnectedAccount.user_id == current_user.id)
     )
     accounts = result.scalars().all()
+    response_data = [ConnectedAccountResponse.model_validate(a).model_dump(mode="json") for a in accounts]
+    await cache_service.set(cache_key, response_data, ttl_seconds=300)
     return [ConnectedAccountResponse.model_validate(a) for a in accounts]
 
 
@@ -70,6 +79,9 @@ async def disconnect_account(
     platform_name = account.platform.value
     await db.delete(account)
     await db.commit()
+
+    # Invalidate account list cache
+    await cache_service.delete(f"user_accounts:{current_user.id}")
 
     await ActivityLogService.log(
         db,

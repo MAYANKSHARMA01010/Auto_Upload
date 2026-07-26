@@ -35,8 +35,25 @@ class Settings(BaseSettings):
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
-    # Database
+    SERVER_PORT: int = 8000
+
+    # Frontend URLs
+    FRONTEND_LOCAL_URL: str = "http://localhost:3000"
+    FRONTEND_HOSTED_URL: str = ""
+
+    # Backend URLs
+    BACKEND_LOCAL_URL: str = "http://localhost:8000"
+    BACKEND_HOSTED_URL: str = ""
+
+    # Database & Caching
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/clipscheduler"
+    REDIS_LOCAL_URL: str = ""
+    REDIS_HOSTED_URL: str = ""
+
+    @property
+    def active_redis_url(self) -> str:
+        """Return active Redis URL (prefers REDIS_HOSTED_URL, fallback to REDIS_LOCAL_URL)."""
+        return self.REDIS_HOSTED_URL or self.REDIS_LOCAL_URL
 
     # Cloudflare R2 / S3
     R2_ACCESS_KEY_ID: str = ""
@@ -55,40 +72,43 @@ class Settings(BaseSettings):
     # Platform OAuth Credentials
     YOUTUBE_CLIENT_ID: str = ""
     YOUTUBE_CLIENT_SECRET: str = ""
-    YOUTUBE_REDIRECT_URI: str = "http://localhost:8000/api/v1/accounts/oauth/youtube/callback"
+    YOUTUBE_REDIRECT_URI: str = ""
 
     INSTAGRAM_CLIENT_ID: str = ""
     INSTAGRAM_CLIENT_SECRET: str = ""
-    INSTAGRAM_REDIRECT_URI: str = "http://localhost:8000/api/v1/accounts/oauth/instagram/callback"
+    INSTAGRAM_REDIRECT_URI: str = ""
 
     FACEBOOK_APP_ID: str = ""
     FACEBOOK_APP_SECRET: str = ""
-    FACEBOOK_REDIRECT_URI: str = "http://localhost:8000/api/v1/accounts/oauth/facebook/callback"
+    FACEBOOK_REDIRECT_URI: str = ""
 
     TIKTOK_CLIENT_KEY: str = ""
     TIKTOK_CLIENT_SECRET: str = ""
-    TIKTOK_REDIRECT_URI: str = "http://localhost:8000/api/v1/accounts/oauth/tiktok/callback"
+    TIKTOK_REDIRECT_URI: str = ""
 
     THREADS_CLIENT_ID: str = ""
     THREADS_CLIENT_SECRET: str = ""
-    THREADS_REDIRECT_URI: str = "http://localhost:8000/api/v1/accounts/oauth/threads/callback"
+    THREADS_REDIRECT_URI: str = ""
 
     X_API_KEY: str = ""
     X_API_SECRET: str = ""
-    X_REDIRECT_URI: str = "http://localhost:8000/api/v1/accounts/oauth/x/callback"
+    X_REDIRECT_URI: str = ""
 
     SNAPCHAT_CLIENT_ID: str = ""
     SNAPCHAT_CLIENT_SECRET: str = ""
-    SNAPCHAT_REDIRECT_URI: str = "http://localhost:8000/api/v1/accounts/oauth/snapchat/callback"
+    SNAPCHAT_REDIRECT_URI: str = ""
 
     # Gemini & Stock APIs
     GEMINI_API_KEY: str = ""
     PEXELS_API_KEY: str = ""
-    GEMINI_PRIMARY_MODEL: str = "gemini-2.0-flash"
-    GEMINI_CANDIDATE_MODEL: str = "gemini-2.0-flash-lite"
+    GEMINI_PRIMARY_MODEL: str = ""
+    GEMINI_CANDIDATE_MODEL: str = ""
 
-    # Frontend
-    FRONTEND_URL: str = "http://localhost:3000"
+    # Frontend URL Dynamic Property
+    @property
+    def FRONTEND_URL(self) -> str:
+        """Active Frontend URL (prefers FRONTEND_HOSTED_URL, fallback to FRONTEND_LOCAL_URL)."""
+        return self.FRONTEND_HOSTED_URL or self.FRONTEND_LOCAL_URL
 
 
 @lru_cache()
