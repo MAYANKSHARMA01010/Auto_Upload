@@ -22,7 +22,7 @@ class FacebookService(BasePlatformConnector):
         params = {
             "client_id": settings.FACEBOOK_APP_ID,
             "redirect_uri": settings.FACEBOOK_REDIRECT_URI,
-            "scope": "public_profile,email",
+            "scope": "public_profile,email,pages_show_list,pages_read_engagement,pages_manage_posts",
             "response_type": "code",
             "state": state,
         }

@@ -352,7 +352,8 @@ async def oauth_callback(
                         if me_resp.status_code == 200:
                             mdata = me_resp.json()
                             platform_user_id = str(mdata.get("id", ""))
-                            username = mdata.get("name", "Facebook Page")
+                            username = mdata.get("name", "Facebook User")
+                            handle = f"@{username.lower().replace(' ', '')}"
                             email = mdata.get("email", "")
 
                             # If a linked Instagram Business Account is present, extract its handle
