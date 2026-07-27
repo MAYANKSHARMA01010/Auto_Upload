@@ -365,6 +365,7 @@ async def oauth_callback(
                                     p_name = page_item.get("name", f"Facebook Page {index+1}")
                                     p_token = page_item.get("access_token", access_token)
                                     p_handle = f"@{p_name.lower().replace(' ', '')}"
+                                    p_email = f"Page • Belongs to {username}"
 
                                     page_stmt = select(ConnectedAccount).where(
                                         ConnectedAccount.user_id == user.id,
@@ -376,6 +377,7 @@ async def oauth_callback(
                                         existing_page.access_token = p_token
                                         existing_page.username = p_name
                                         existing_page.handle = p_handle
+                                        existing_page.email = p_email
                                         existing_page.is_active = True
                                     else:
                                         db.add(ConnectedAccount(
@@ -384,16 +386,10 @@ async def oauth_callback(
                                             platform_user_id=p_id,
                                             username=p_name,
                                             handle=p_handle,
+                                            email=p_email,
                                             access_token=p_token,
                                             is_active=True,
                                         ))
-
-                                    # Main platform_user_id takes the primary page
-                                    if index == 0:
-                                        platform_user_id = p_id
-                                        username = p_name
-                                        handle = p_handle
-                                        access_token = p_token
                     except Exception as e:
                         print(f"DEBUG FB ME FETCH ERROR: {e}")
 

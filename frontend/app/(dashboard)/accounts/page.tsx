@@ -497,7 +497,9 @@ function AccountCard({
                 <Icon className={`h-4 w-4 ${platformDef.barColor === "bg-red-500" ? "text-red-400" : platformDef.barColor === "bg-pink-500" ? "text-pink-400" : platformDef.barColor === "bg-blue-500" ? "text-blue-400" : platformDef.barColor === "bg-sky-500" ? "text-sky-400" : platformDef.barColor === "bg-yellow-400" ? "text-yellow-400" : "text-foreground"}`} />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-muted-foreground">{platformDef.name}</p>
+                <p className="text-xs font-semibold text-muted-foreground">
+                  {account.platform === "facebook" ? (account.email?.includes("Belongs to") ? "Facebook Page" : "Facebook User") : platformDef.name}
+                </p>
                 <p className="text-sm font-bold text-foreground truncate">{account.username || "Connected Account"}</p>
               </div>
             </div>
@@ -509,9 +511,11 @@ function AccountCard({
               </span>
             )}
 
-            {/* Email */}
+            {/* Email / Owner info */}
             {account.email ? (
-              <p className="text-xs text-muted-foreground truncate">📧 {account.email}</p>
+              <p className="text-xs text-muted-foreground truncate">
+                {account.email.includes("Belongs to") ? `📄 ${account.email}` : `📧 ${account.email}`}
+              </p>
             ) : account.platform === "youtube" && (
               <p className="text-[11px] text-amber-500/80 italic">↻ Reconnect to show Gmail</p>
             )}
