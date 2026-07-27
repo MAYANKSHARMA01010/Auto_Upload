@@ -3,6 +3,7 @@ ClipScheduler FastAPI Application Entry Point.
 """
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -100,10 +101,21 @@ SHORTS_FACTORY_ROOT_COVERS = "/Users/mayanksharma/Downloads/New_Projects/shorts-
 if os.path.isdir(SHORTS_FACTORY_DATA):
     app.mount("/local-media/data", StaticFiles(directory=SHORTS_FACTORY_DATA), name="local-media-data")
 
-if os.path.isdir(SHORTS_FACTORY_COVERS):
-    app.mount("/local-media/covers", StaticFiles(directory=SHORTS_FACTORY_COVERS), name="local-media-covers")
-elif os.path.isdir(SHORTS_FACTORY_ROOT_COVERS):
-    app.mount("/local-media/covers", StaticFiles(directory=SHORTS_FACTORY_ROOT_COVERS), name="local-media-covers")
+from fastapi import HTTPException
+from fastapi.responses import FileResponse
+
+@app.get("/local-media/covers/{filename:path}", include_in_schema=False)
+async def get_cover_file(filename: str):
+    p1 = Path(SHORTS_FACTORY_COVERS) / filename
+    if p1.is_file():
+        return FileResponse(str(p1))
+    p2 = Path(SHORTS_FACTORY_ROOT_COVERS) / filename
+    if p2.is_file():
+        return FileResponse(str(p2))
+    p3 = Path(SHORTS_FACTORY_DATA) / filename
+    if p3.is_file():
+        return FileResponse(str(p3))
+    raise HTTPException(status_code=404, detail="Cover image not found")
 
 from fastapi.responses import RedirectResponse
 

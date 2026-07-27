@@ -407,8 +407,29 @@ async def oauth_callback(
                 )
                 if token_resp.status_code == 200:
                     tdata = token_resp.json()
-                    access_token = tdata.get("access_token", "")
-                    username = "Threads User"
+                    access_token = str(tdata.get("access_token", ""))
+                    user_id_from_token = str(tdata.get("user_id", ""))
+                    
+                    # Fetch profile from Threads Graph API
+                    try:
+                        th_profile = await client.get(
+                            "https://graph.threads.net/v1.0/me",
+                            params={"fields": "id,username", "access_token": access_token},
+                            timeout=10,
+                        )
+                        if th_profile.status_code == 200:
+                            pdata = th_profile.json()
+                            platform_user_id = str(pdata.get("id", user_id_from_token))
+                            th_user = pdata.get("username", "")
+                            if th_user:
+                                username = th_user
+                                handle = f"@{th_user.lstrip('@')}"
+                    except Exception as e:
+                        print(f"DEBUG THREADS PROFILE FETCH ERROR: {e}")
+
+                    if not username:
+                        username = f"Threads User ({user_id_from_token[:8]})" if user_id_from_token else "Threads User"
+                        platform_user_id = user_id_from_token
 
             elif platform == Platform.X:
                 token_resp = await client.post(

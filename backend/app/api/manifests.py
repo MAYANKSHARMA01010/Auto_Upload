@@ -60,6 +60,26 @@ def _load_manifest_file(json_path: Path) -> dict | None:
         return None
 
 
+def _resolve_cover_path(raw_cover_path: str, project_id: str) -> str:
+    """If the raw cover path exists on disk, return it. Otherwise fuzzy-search covers dir."""
+    if raw_cover_path and os.path.exists(raw_cover_path):
+        return raw_cover_path
+
+    covers_dir = SHORTS_FACTORY_DATA_DIR / "covers"
+    if not covers_dir.exists():
+        return raw_cover_path
+
+    clean_id = project_id.replace("explainer_", "").replace("manifest_", "").lower()
+    for c_file in covers_dir.glob("*.jpg"):
+        if clean_id in c_file.name.lower():
+            return str(c_file)
+    for c_file in covers_dir.glob("*.png"):
+        if clean_id in c_file.name.lower():
+            return str(c_file)
+
+    return raw_cover_path
+
+
 def _build_summary(data: dict, json_path: Path) -> dict:
     """Build a lean summary card from a full manifest dict."""
     project_info = data.get("project_info", {})
@@ -67,21 +87,28 @@ def _build_summary(data: dict, json_path: Path) -> dict:
     master = data.get("master_metadata", {})
     platforms = data.get("platforms", {})
 
+    project_id = project_info.get("id", json_path.stem.replace("manifest_", ""))
     video_path = assets.get("video_path", "")
+    raw_cover = assets.get("default_cover_path", "")
+    resolved_cover = _resolve_cover_path(raw_cover, project_id)
     duration_sec, duration_fmt = _get_video_duration_info(video_path)
+
     return {
-        "id": project_info.get("id", json_path.stem.replace("manifest_", "")),
+        "id": project_id,
         "status": project_info.get("status", "unknown"),
         "title": master.get("title", project_info.get("generation_params", {}).get("title", "Untitled")),
         "description": master.get("description", ""),
         "video_path": video_path,
-        "cover_path": assets.get("default_cover_path", ""),
+        "cover_path": resolved_cover,
         "cover_timestamp": assets.get("cover_timestamp", "2.0"),
         "size_mb": _get_video_size_mb(video_path),
         "duration": duration_sec,
         "duration_formatted": duration_fmt,
         "platforms_enabled": [k for k, v in platforms.items() if isinstance(v, dict) and v.get("enabled", False)],
-        "created_at": project_info.get("created_at", ""),
+        "created_at": project_info.get("created_at") or (
+            __import__("datetime").datetime.fromtimestamp(json_path.stat().st_mtime).isoformat()
+            if json_path.exists() else ""
+        ),
         "manifest_path": str(json_path),
     }
 
