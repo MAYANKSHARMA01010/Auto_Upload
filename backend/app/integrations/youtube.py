@@ -149,3 +149,133 @@ class YouTubeService(BasePlatformConnector):
         except Exception:
             pass
         return "unknown"
+
+    async def get_channel_analytics(self) -> dict:
+        """Fetch YouTube channel snippet and statistics (subscribers, views, video count). Auto-refreshes token if expired."""
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(
+                    f"{self.API_BASE}/channels",
+                    headers=self._headers(),
+                    params={"part": "snippet,statistics,contentDetails", "mine": "true"},
+                    timeout=10,
+                )
+                if resp.status_code == 401:
+                    # Token expired, attempt refresh
+                    if await self.refresh_token():
+                        resp = await client.get(
+                            f"{self.API_BASE}/channels",
+                            headers=self._headers(),
+                            params={"part": "snippet,statistics,contentDetails", "mine": "true"},
+                            timeout=10,
+                        )
+                if resp.status_code == 200:
+                    items = resp.json().get("items", [])
+                    if items:
+                        item = items[0]
+                        snippet = item.get("snippet", {})
+                        stats = item.get("statistics", {})
+                        uploads_playlist = item.get("contentDetails", {}).get("relatedPlaylists", {}).get("uploads", "")
+                        return {
+                            "channel_id": item.get("id", ""),
+                            "title": snippet.get("title", self.account.username or "YouTube Channel"),
+                            "custom_url": snippet.get("customUrl", ""),
+                            "avatar_url": snippet.get("thumbnails", {}).get("default", {}).get("url", ""),
+                            "subscribers": int(stats.get("subscriberCount", 0)),
+                            "total_views": int(stats.get("viewCount", 0)),
+                            "video_count": int(stats.get("videoCount", 0)),
+                            "uploads_playlist": uploads_playlist,
+                        }
+        except Exception:
+            pass
+        return {
+            "channel_id": self.account.platform_user_id or "",
+            "title": self.account.username or "YouTube Channel",
+            "custom_url": "",
+            "avatar_url": "",
+            "subscribers": 0,
+            "total_views": 0,
+            "video_count": 0,
+            "uploads_playlist": "",
+        }
+
+    async def get_video_analytics(self, uploads_playlist: str = "", max_results: int = 25) -> list[dict]:
+        """Fetch channel's uploaded videos and their view/like/comment performance metrics."""
+        videos = []
+        try:
+            async with httpx.AsyncClient() as client:
+                video_ids = []
+                # Step 1: Query playlist items or search for channel's videos
+                if uploads_playlist:
+                    pl_resp = await client.get(
+                        f"{self.API_BASE}/playlistItems",
+                        headers=self._headers(),
+                        params={"part": "contentDetails", "playlistId": uploads_playlist, "maxResults": max_results},
+                        timeout=10,
+                    )
+                    if pl_resp.status_code == 401 and await self.refresh_token():
+                        pl_resp = await client.get(
+                            f"{self.API_BASE}/playlistItems",
+                            headers=self._headers(),
+                            params={"part": "contentDetails", "playlistId": uploads_playlist, "maxResults": max_results},
+                            timeout=10,
+                        )
+                    if pl_resp.status_code == 200:
+                        for item in pl_resp.json().get("items", []):
+                            vid = item.get("contentDetails", {}).get("videoId")
+                            if vid:
+                                video_ids.append(vid)
+
+                if not video_ids:
+                    s_resp = await client.get(
+                        f"{self.API_BASE}/search",
+                        headers=self._headers(),
+                        params={"part": "id", "forMine": "true", "type": "video", "maxResults": max_results},
+                        timeout=10,
+                    )
+                    if s_resp.status_code == 401 and await self.refresh_token():
+                        s_resp = await client.get(
+                            f"{self.API_BASE}/search",
+                            headers=self._headers(),
+                            params={"part": "id", "forMine": "true", "type": "video", "maxResults": max_results},
+                            timeout=10,
+                        )
+                    if s_resp.status_code == 200:
+                        for item in s_resp.json().get("items", []):
+                            vid = item.get("id", {}).get("videoId")
+                            if vid:
+                                video_ids.append(vid)
+
+                if video_ids:
+                    v_resp = await client.get(
+                        f"{self.API_BASE}/videos",
+                        headers=self._headers(),
+                        params={"part": "snippet,statistics,contentDetails", "id": ",".join(video_ids[:50])},
+                        timeout=10,
+                    )
+                    if v_resp.status_code == 401 and await self.refresh_token():
+                        v_resp = await client.get(
+                            f"{self.API_BASE}/videos",
+                            headers=self._headers(),
+                            params={"part": "snippet,statistics,contentDetails", "id": ",".join(video_ids[:50])},
+                            timeout=10,
+                        )
+                    if v_resp.status_code == 200:
+                        for item in v_resp.json().get("items", []):
+                            snippet = item.get("snippet", {})
+                            stats = item.get("statistics", {})
+                            v_id = item.get("id", "")
+                            videos.append({
+                                "id": v_id,
+                                "title": snippet.get("title", "Untitled Video"),
+                                "description": snippet.get("description", ""),
+                                "thumbnail_url": snippet.get("thumbnails", {}).get("medium", {}).get("url", ""),
+                                "published_at": snippet.get("publishedAt", ""),
+                                "views": int(stats.get("viewCount", 0)),
+                                "likes": int(stats.get("likeCount", 0)),
+                                "comments": int(stats.get("commentCount", 0)),
+                                "permalink": f"https://www.youtube.com/watch?v={v_id}",
+                            })
+        except Exception:
+            pass
+        return videos

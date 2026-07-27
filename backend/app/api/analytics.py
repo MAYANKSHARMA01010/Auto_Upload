@@ -5,11 +5,14 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, or_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_service
 from app.core.dependencies import get_current_user, get_db
+from app.integrations.youtube import YouTubeService
+from app.integrations.instagram import InstagramService
+from app.integrations.facebook import FacebookService
 from app.models.connected_account import ConnectedAccount
 from app.models.scheduled_post import Platform, PostStatus, ScheduledPost
 from app.models.user import User
@@ -174,13 +177,48 @@ async def get_social_insights(
     ]
 
     # Select target account
-    selected_account = None
+    selected_account_dict = None
+    selected_account_obj = None
     if account_id:
-        selected_account = next((a for a in platform_accounts if a["id"] == account_id), None)
-    if not selected_account and platform_accounts:
-        selected_account = platform_accounts[0]
+        selected_account_obj = next((a for a in all_accounts if str(a.id) == account_id), None)
+    if not selected_account_obj and all_accounts:
+        # Match platform first
+        selected_account_obj = next(
+            (a for a in all_accounts if (a.platform.value if hasattr(a.platform, "value") else str(a.platform)).lower() == p_lower),
+            None
+        )
 
-    # 2. Query posts for this specific platform and user
+    if selected_account_obj:
+        selected_account_dict = {
+            "id": str(selected_account_obj.id),
+            "platform": selected_account_obj.platform.value if hasattr(selected_account_obj.platform, "value") else str(selected_account_obj.platform),
+            "username": selected_account_obj.username or selected_account_obj.platform_user_id or "Connected Account",
+            "platform_user_id": selected_account_obj.platform_user_id,
+            "created_at": selected_account_obj.created_at.isoformat() if selected_account_obj.created_at else None,
+        }
+
+    # 2. Fetch Live Account Level & Media Analytics from Platform Services
+    account_metrics = {}
+    platform_media = []
+
+    if selected_account_obj and selected_account_obj.access_token:
+        try:
+            if p_lower == "youtube":
+                svc = YouTubeService(selected_account_obj)
+                account_metrics = await svc.get_channel_analytics()
+                platform_media = await svc.get_video_analytics(uploads_playlist=account_metrics.get("uploads_playlist", ""))
+            elif p_lower == "instagram":
+                svc = InstagramService(selected_account_obj)
+                account_metrics = await svc.get_account_analytics()
+                platform_media = await svc.get_media_analytics()
+            elif p_lower == "facebook":
+                svc = FacebookService(selected_account_obj)
+                account_metrics = await svc.get_page_analytics()
+                platform_media = await svc.get_post_analytics()
+        except Exception:
+            pass
+
+    # 3. Query local scheduled/published posts from Database
     posts_query = (
         select(ScheduledPost, Video)
         .join(Video, ScheduledPost.video_id == Video.id)
@@ -194,23 +232,27 @@ async def get_social_insights(
     if p_lower:
         posts_query = posts_query.where(ScheduledPost.platform == p_lower)
 
-    if selected_account:
-        posts_query = posts_query.where(ScheduledPost.connected_account_id == selected_account["id"])
+    if selected_account_dict:
+        posts_query = posts_query.where(
+            or_(
+                ScheduledPost.connected_account_id == selected_account_dict["id"],
+                ScheduledPost.connected_account_id.is_(None)
+            )
+        )
 
     posts_query = posts_query.order_by(ScheduledPost.created_at.desc())
     posts_result = await db.execute(posts_query)
     rows = posts_result.all()
 
-    # 3. Calculate dynamic statistics from database rows
     total_posts = len(rows)
     published_count = sum(1 for post, _ in rows if post.status == PostStatus.PUBLISHED)
     scheduled_count = sum(1 for post, _ in rows if post.status == PostStatus.SCHEDULED)
     failed_count = sum(1 for post, _ in rows if post.status == PostStatus.FAILED)
     draft_count = sum(1 for post, _ in rows if post.status == PostStatus.DRAFT)
 
-    video_items = []
+    local_videos = []
     for post, video in rows:
-        video_items.append({
+        local_videos.append({
             "id": str(post.id),
             "video_id": str(video.id),
             "title": post.title or post.caption or post.post_text or video.title or "Untitled Short",
@@ -224,7 +266,9 @@ async def get_social_insights(
     return {
         "platform": p_lower,
         "connected_accounts": platform_accounts,
-        "selected_account": selected_account,
+        "selected_account": selected_account_dict,
+        "account_metrics": account_metrics,
+        "platform_media": platform_media,
         "stats": {
             "total_posts": total_posts,
             "published": published_count,
@@ -232,5 +276,5 @@ async def get_social_insights(
             "failed": failed_count,
             "drafts": draft_count,
         },
-        "videos": video_items,
+        "videos": local_videos,
     }

@@ -63,5 +63,141 @@ class FacebookService(BasePlatformConnector):
         except Exception:
             return False
 
+    async def get_page_analytics(self) -> dict:
+        """Fetch Facebook Page details, page likes (fan_count), and followers count."""
+        target_id = self.account.platform_user_id or "me"
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(
+                    f"{self.GRAPH_URL}/{target_id}",
+                    params={
+                        "access_token": self.account.access_token,
+                        "fields": "id,name,picture,followers_count,fan_count,username,category",
+                    },
+                    timeout=10,
+                )
+                if resp.status_code != 200 and target_id != "me":
+                    resp = await client.get(
+                        f"{self.GRAPH_URL}/me",
+                        params={
+                            "access_token": self.account.access_token,
+                            "fields": "id,name,picture,followers_count,fan_count,username,category",
+                        },
+                        timeout=10,
+                    )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    pic_url = data.get("picture", {}).get("data", {}).get("url", "")
+                    return {
+                        "page_id": data.get("id", ""),
+                        "name": data.get("name", self.account.username or "Facebook Page"),
+                        "username": data.get("username", self.account.username or ""),
+                        "picture_url": pic_url,
+                        "page_likes": int(data.get("fan_count", 0)),
+                        "followers": int(data.get("followers_count", 0)),
+                    }
+        except Exception:
+            pass
+        return {
+            "page_id": self.account.platform_user_id or "",
+            "name": self.account.username or "Facebook Page",
+            "username": self.account.username or "",
+            "picture_url": "",
+            "page_likes": 0,
+            "followers": 0,
+        }
+
+    async def get_post_analytics(self, max_results: int = 25) -> list[dict]:
+        """Fetch Facebook Page published videos and posts with resilient field fallbacks."""
+        items = []
+        seen_ids = set()
+        target_ids = [self.account.platform_user_id, "me"] if self.account.platform_user_id else ["me"]
+
+        try:
+            async with httpx.AsyncClient() as client:
+                # 1. Fetch Page Videos first
+                for tid in target_ids:
+                    if not tid:
+                        continue
+                    for fields in [
+                        "id,title,description,picture,permalink_url,created_time,views,likes.summary(true),comments.summary(true)",
+                        "id,title,description,picture,permalink_url,created_time,views",
+                        "id,title,description,picture,permalink_url,created_time",
+                    ]:
+                        v_resp = await client.get(
+                            f"{self.GRAPH_URL}/{tid}/videos",
+                            params={"access_token": self.account.access_token, "fields": fields, "limit": max_results},
+                            timeout=10,
+                        )
+                        if v_resp.status_code == 200:
+                            for v in v_resp.json().get("data", []):
+                                v_id = v.get("id", "")
+                                if v_id in seen_ids:
+                                    continue
+                                seen_ids.add(v_id)
+                                title_text = v.get("title") or v.get("description") or f"Facebook Video ({v_id[-6:]})"
+                                likes_count = v.get("likes", {}).get("summary", {}).get("total_count", 0) if isinstance(v.get("likes"), dict) else 0
+                                comments_count = v.get("comments", {}).get("summary", {}).get("total_count", 0) if isinstance(v.get("comments"), dict) else 0
+                                items.append({
+                                    "id": v_id,
+                                    "title": title_text,
+                                    "message": title_text,
+                                    "thumbnail_url": v.get("picture", ""),
+                                    "permalink": v.get("permalink_url") or f"https://www.facebook.com/{v_id}",
+                                    "published_at": v.get("created_time", ""),
+                                    "views": int(v.get("views", 0)),
+                                    "likes": int(likes_count),
+                                    "reactions": int(likes_count),
+                                    "comments": int(comments_count),
+                                    "shares": 0,
+                                })
+                            break
+
+                # 2. Fetch Page Published Posts or Feed
+                for tid in target_ids:
+                    if not tid:
+                        continue
+                    for endpoint in ["published_posts", "feed", "posts"]:
+                        for fields in [
+                            "id,message,description,story,created_time,full_picture,permalink_url,likes.summary(true),comments.summary(true),shares",
+                            "id,message,description,story,created_time,full_picture,permalink_url",
+                        ]:
+                            p_resp = await client.get(
+                                f"{self.GRAPH_URL}/{tid}/{endpoint}",
+                                params={"access_token": self.account.access_token, "fields": fields, "limit": max_results},
+                                timeout=10,
+                            )
+                            if p_resp.status_code == 200:
+                                posts_data = p_resp.json().get("data", [])
+                                if posts_data:
+                                    for post in posts_data:
+                                        p_id = post.get("id", "")
+                                        if p_id in seen_ids:
+                                            continue
+                                        seen_ids.add(p_id)
+                                        title_text = post.get("message") or post.get("description") or post.get("story") or f"Facebook Post ({p_id[-6:]})"
+                                        likes_count = post.get("likes", {}).get("summary", {}).get("total_count", 0) if isinstance(post.get("likes"), dict) else 0
+                                        comments_count = post.get("comments", {}).get("summary", {}).get("total_count", 0) if isinstance(post.get("comments"), dict) else 0
+                                        shares_count = post.get("shares", {}).get("count", 0) if isinstance(post.get("shares"), dict) else 0
+                                        items.append({
+                                            "id": p_id,
+                                            "title": title_text,
+                                            "message": title_text,
+                                            "thumbnail_url": post.get("full_picture", ""),
+                                            "permalink": post.get("permalink_url") or f"https://www.facebook.com/{p_id}",
+                                            "published_at": post.get("created_time", ""),
+                                            "views": 0,
+                                            "likes": int(likes_count),
+                                            "reactions": int(likes_count),
+                                            "comments": int(comments_count),
+                                            "shares": int(shares_count),
+                                        })
+                                    break
+                        if items:
+                            break
+        except Exception:
+            pass
+        return items
+
     async def get_status(self, platform_post_id: str) -> str:
         return "unknown"

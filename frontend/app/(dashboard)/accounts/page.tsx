@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Loader2,
   Plus,
@@ -417,7 +418,7 @@ function AccountCard({
   return (
     <div
       onClick={isEditing ? undefined : onClick}
-      className="group relative rounded-2xl border border-border bg-card overflow-hidden cursor-pointer hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200"
+      className="group relative flex flex-col justify-between rounded-2xl border border-border bg-card overflow-hidden cursor-pointer hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5 transition-all duration-200 min-h-[240px]"
     >
       {/* Top accent bar */}
       <div className={`h-1 w-full ${platformDef.barColor}`} />
@@ -425,13 +426,20 @@ function AccountCard({
       {/* Gradient bg glow */}
       <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-br ${platformDef.cardAccent} transition-opacity duration-300 pointer-events-none`} />
 
-      <div className="relative p-4 space-y-3">
-        {/* Top row: status + edit + delete */}
-        <div className="flex items-center justify-between">
-          <Badge variant={account.is_active ? "default" : "destructive"} className="text-[10px]">
-            {account.is_active ? "Active" : "Expired"}
-          </Badge>
-          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+      <div className="relative p-5 flex-1 flex flex-col justify-between space-y-4">
+        {/* Top row: shiny status dot next to pencil icon + delete icon */}
+        <div className="flex items-center justify-end w-full">
+          <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+            {account.is_active ? (
+              <span className="relative flex h-3 w-3 items-center justify-center mr-1.5" title="Account Active & Connected">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)] ring-2 ring-emerald-400/40" />
+              </span>
+            ) : (
+              <span className="relative flex h-3 w-3 items-center justify-center mr-1.5" title="Account Token Expired">
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.9)] ring-2 ring-red-500/40" />
+              </span>
+            )}
             <Button
               variant="ghost"
               size="icon"
@@ -491,45 +499,56 @@ function AccountCard({
           </div>
         ) : (
           <>
-            {/* Platform + account name */}
-            <div className="flex items-center gap-2.5">
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${platformDef.barColor}/20 border border-white/10 shrink-0`}>
-                <Icon className={`h-4 w-4 ${platformDef.barColor === "bg-red-500" ? "text-red-400" : platformDef.barColor === "bg-pink-500" ? "text-pink-400" : platformDef.barColor === "bg-blue-500" ? "text-blue-400" : platformDef.barColor === "bg-sky-500" ? "text-sky-400" : platformDef.barColor === "bg-yellow-400" ? "text-yellow-400" : "text-foreground"}`} />
+            {/* Middle Section: Platform Icon + Username + Handle & Details */}
+            <div className="space-y-2.5 flex-1 flex flex-col justify-center">
+              <div className="flex items-center gap-2.5">
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${platformDef.barColor}/20 border border-white/10 shrink-0`}>
+                  <Icon className={`h-4 w-4 ${platformDef.barColor === "bg-red-500" ? "text-red-400" : platformDef.barColor === "bg-pink-500" ? "text-pink-400" : platformDef.barColor === "bg-blue-500" ? "text-blue-400" : platformDef.barColor === "bg-sky-500" ? "text-sky-400" : platformDef.barColor === "bg-yellow-400" ? "text-yellow-400" : "text-foreground"}`} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-muted-foreground">
+                    {account.platform === "facebook" ? (account.email?.includes("Belongs to") ? "Facebook Page" : "Facebook User") : platformDef.name}
+                  </p>
+                  <p className="text-sm font-bold text-foreground truncate">{account.username || "Connected Account"}</p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-muted-foreground">
-                  {account.platform === "facebook" ? (account.email?.includes("Belongs to") ? "Facebook Page" : "Facebook User") : platformDef.name}
-                </p>
-                <p className="text-sm font-bold text-foreground truncate">{account.username || "Connected Account"}</p>
+
+              {/* Handle pill & Email / Metadata */}
+              <div className="space-y-1">
+                {account.handle ? (
+                  <span className="inline-flex items-center text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                    {account.handle}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center text-xs font-semibold text-muted-foreground/60 bg-muted/20 px-2 py-0.5 rounded-full">
+                    @{account.username?.toLowerCase().replace(/\s+/g, "") || "account"}
+                  </span>
+                )}
+
+                {account.email ? (
+                  <p className="text-xs text-muted-foreground truncate pt-0.5">
+                    {account.email.includes("Belongs to") ? `📄 ${account.email}` : `📧 ${account.email}`}
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground/50 truncate pt-0.5">
+                    {account.platform === "youtube" ? "↻ Reconnect to show Gmail" : "• Connected via OAuth"}
+                  </p>
+                )}
               </div>
             </div>
 
-            {/* Handle */}
-            {account.handle && (
-              <span className="inline-flex items-center text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                {account.handle}
-              </span>
-            )}
-
-            {/* Email / Owner info */}
-            {account.email ? (
-              <p className="text-xs text-muted-foreground truncate">
-                {account.email.includes("Belongs to") ? `📄 ${account.email}` : `📧 ${account.email}`}
+            {/* Footer: ID + View Analytics Action Button */}
+            <div className="flex items-center justify-between pt-2 border-t border-border/40 mt-auto">
+              <p className="text-[10px] text-muted-foreground font-mono truncate max-w-[50%]">
+                {account.platform_user_id ? `${account.platform_user_id.slice(0, 14)}…` : "ID: Connected"}
               </p>
-            ) : account.platform === "youtube" && (
-              <p className="text-[11px] text-amber-500/80 italic">↻ Reconnect to show Gmail</p>
-            )}
-
-            {/* Footer: ID + "View insights" hint */}
-            <div className="flex items-center justify-between pt-1">
-              {account.platform_user_id && (
-                <p className="text-[10px] text-muted-foreground font-mono truncate max-w-[60%]">
-                  {account.platform_user_id.slice(0, 16)}…
-                </p>
-              )}
-              <span className="text-[11px] text-primary/70 font-semibold group-hover:text-primary transition-colors ml-auto">
-                View insights →
-              </span>
+              <Link
+                href={`/analytics?platform=${account.platform}&account_id=${account.id}`}
+                onClick={(e) => e.stopPropagation()}
+                className="text-[11px] text-primary font-semibold hover:underline transition-colors ml-auto flex items-center gap-1 bg-primary/10 px-2.5 py-1 rounded-md border border-primary/20"
+              >
+                View Analytics <span className="material-symbols-outlined text-xs">trending_up</span>
+              </Link>
             </div>
           </>
         )}
@@ -540,8 +559,8 @@ function AccountCard({
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function AccountsPage() {
+  const router = useRouter();
   const [activePlatform, setActivePlatform] = useState("all");
-  const [selectedAccount, setSelectedAccount] = useState<ConnectedAccount | null>(null);
   const [isConnecting, setIsConnecting] = useState<string | null>(null);
 
   const { data: accounts, isLoading, refetch } = useQuery<ConnectedAccount[]>({
@@ -587,7 +606,6 @@ export default function AccountsPage() {
   const handleDisconnect = async (accountId: string) => {
     await api.delete(`/accounts/${accountId}`);
     toast.success("Account disconnected");
-    if (selectedAccount?.id === accountId) setSelectedAccount(null);
     refetch();
   };
 
@@ -597,19 +615,6 @@ export default function AccountsPage() {
   // Filter accounts by active platform tab
   const filteredAccounts =
     activePlatform === "all" ? accounts ?? [] : (accounts ?? []).filter((a) => a.platform === activePlatform);
-
-  // ── Detail view ──
-  if (selectedAccount) {
-    return (
-      <div className="p-6 max-w-5xl mx-auto pb-12">
-        <AccountInsightView
-          account={selectedAccount}
-          platformDef={getPlatformDef(selectedAccount.platform)}
-          onBack={() => setSelectedAccount(null)}
-        />
-      </div>
-    );
-  }
 
   // ── List view ──
   return (
@@ -689,7 +694,7 @@ export default function AccountsPage() {
       </div>
 
       {/* Account cards grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {isLoading ? (
           Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="rounded-2xl border border-border bg-card p-4 space-y-3">
@@ -722,7 +727,7 @@ export default function AccountsPage() {
               key={account.id}
               account={account}
               platformDef={getPlatformDef(account.platform)}
-              onClick={() => setSelectedAccount(account)}
+              onClick={() => router.push(`/analytics?platform=${account.platform}&account_id=${account.id}`)}
               onDelete={() => handleDisconnect(account.id)}
               onRefresh={refetch}
             />

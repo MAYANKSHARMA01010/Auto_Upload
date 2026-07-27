@@ -72,6 +72,100 @@ class InstagramService(BasePlatformConnector):
         except Exception:
             return False
 
+    def _get_api_url(self) -> str:
+        token = self.account.access_token or ""
+        if token.startswith("IG"):
+            return "https://graph.instagram.com"
+        return "https://graph.facebook.com/v19.0"
+
+    async def get_account_analytics(self) -> dict:
+        """Fetch Instagram profile details and followers count."""
+        api_url = self._get_api_url()
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(
+                    f"{api_url}/me",
+                    params={
+                        "access_token": self.account.access_token,
+                        "fields": "id,username,name,profile_picture_url,followers_count,media_count,biography",
+                    },
+                    timeout=10,
+                )
+                if resp.status_code != 200 and api_url != "https://graph.instagram.com":
+                    resp = await client.get(
+                        "https://graph.instagram.com/me",
+                        params={
+                            "access_token": self.account.access_token,
+                            "fields": "id,username,name,profile_picture_url,followers_count,media_count,biography",
+                        },
+                        timeout=10,
+                    )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    return {
+                        "ig_id": data.get("id", ""),
+                        "username": data.get("username", self.account.username or "Instagram Account"),
+                        "name": data.get("name", ""),
+                        "profile_picture_url": data.get("profile_picture_url", ""),
+                        "followers": int(data.get("followers_count", 0)),
+                        "total_media": int(data.get("media_count", 0)),
+                    }
+        except Exception:
+            pass
+        return {
+            "ig_id": self.account.platform_user_id or "",
+            "username": self.account.username or "Instagram Account",
+            "name": "",
+            "profile_picture_url": "",
+            "followers": 0,
+            "total_media": 0,
+        }
+
+    async def get_media_analytics(self, max_results: int = 25) -> list[dict]:
+        """Fetch user's Instagram posts/reels with like and comment metrics."""
+        items = []
+        api_url = self._get_api_url()
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(
+                    f"{api_url}/me/media",
+                    params={
+                        "access_token": self.account.access_token,
+                        "fields": "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count",
+                        "limit": max_results,
+                    },
+                    timeout=10,
+                )
+                if resp.status_code != 200 and api_url != "https://graph.instagram.com":
+                    resp = await client.get(
+                        "https://graph.instagram.com/me/media",
+                        params={
+                            "access_token": self.account.access_token,
+                            "fields": "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count",
+                            "limit": max_results,
+                        },
+                        timeout=10,
+                    )
+                if resp.status_code == 200:
+                    for m in resp.json().get("data", []):
+                        caption_text = m.get("caption") or f"Instagram {m.get('media_type', 'Post')}"
+                        items.append({
+                            "id": m.get("id", ""),
+                            "title": caption_text,
+                            "caption": caption_text,
+                            "media_type": m.get("media_type", "IMAGE"),
+                            "thumbnail_url": m.get("thumbnail_url") or m.get("media_url", ""),
+                            "permalink": m.get("permalink", ""),
+                            "published_at": m.get("timestamp", ""),
+                            "views": 0,
+                            "likes": int(m.get("like_count", 0)),
+                            "reactions": int(m.get("like_count", 0)),
+                            "comments": int(m.get("comments_count", 0)),
+                        })
+        except Exception:
+            pass
+        return items
+
     async def get_status(self, platform_post_id: str) -> str:
         try:
             async with httpx.AsyncClient() as client:
