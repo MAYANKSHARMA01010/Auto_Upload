@@ -356,34 +356,44 @@ async def oauth_callback(
                             handle = f"@{username.lower().replace(' ', '')}"
                             email = mdata.get("email", "")
 
-                            # If a linked Instagram Business Account is present, extract its handle
+                            # Extract all Facebook Pages managed by this user
                             accounts_data = mdata.get("accounts", {}).get("data", [])
-                            for acc_item in accounts_data:
-                                ig_biz = acc_item.get("instagram_business_account", {})
-                                if ig_biz and ig_biz.get("username"):
-                                    ig_un = ig_biz.get("username")
-                                    # Create or update Instagram account as well
-                                    ig_stmt = select(ConnectedAccount).where(
+                            if accounts_data:
+                                # Create/Update a ConnectedAccount for each Facebook Page
+                                for index, page_item in enumerate(accounts_data):
+                                    p_id = str(page_item.get("id", ""))
+                                    p_name = page_item.get("name", f"Facebook Page {index+1}")
+                                    p_token = page_item.get("access_token", access_token)
+                                    p_handle = f"@{p_name.lower().replace(' ', '')}"
+
+                                    page_stmt = select(ConnectedAccount).where(
                                         ConnectedAccount.user_id == user.id,
-                                        ConnectedAccount.platform == Platform.INSTAGRAM,
-                                        ConnectedAccount.platform_user_id == str(ig_biz.get("id", "")),
+                                        ConnectedAccount.platform == Platform.FACEBOOK,
+                                        ConnectedAccount.platform_user_id == p_id,
                                     )
-                                    ig_existing = (await db.execute(ig_stmt)).scalar_one_or_none()
-                                    if ig_existing:
-                                        ig_existing.access_token = acc_item.get("access_token", access_token)
-                                        ig_existing.username = ig_un
-                                        ig_existing.handle = f"@{ig_un.lstrip('@')}"
+                                    existing_page = (await db.execute(page_stmt)).scalar_one_or_none()
+                                    if existing_page:
+                                        existing_page.access_token = p_token
+                                        existing_page.username = p_name
+                                        existing_page.handle = p_handle
+                                        existing_page.is_active = True
                                     else:
                                         db.add(ConnectedAccount(
                                             user_id=user.id,
-                                            platform=Platform.INSTAGRAM,
-                                            platform_user_id=str(ig_biz.get("id", "")),
-                                            username=ig_un,
-                                            handle=f"@{ig_un.lstrip('@')}",
-                                            access_token=acc_item.get("access_token", access_token),
+                                            platform=Platform.FACEBOOK,
+                                            platform_user_id=p_id,
+                                            username=p_name,
+                                            handle=p_handle,
+                                            access_token=p_token,
                                             is_active=True,
                                         ))
-                                    break
+
+                                    # Main platform_user_id takes the primary page
+                                    if index == 0:
+                                        platform_user_id = p_id
+                                        username = p_name
+                                        handle = p_handle
+                                        access_token = p_token
                     except Exception as e:
                         print(f"DEBUG FB ME FETCH ERROR: {e}")
 
