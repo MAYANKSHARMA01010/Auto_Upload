@@ -426,7 +426,19 @@ export default function AnalyticsPage() {
                     <td className="py-3 px-4 text-center whitespace-nowrap font-bold text-on-surface">
                       <span className="flex items-center justify-center gap-1">
                         <FaEye className="text-primary text-xs" />
-                        {(post.views ?? 0).toLocaleString()}
+                        {post.views > 0 ? (
+                          post.views.toLocaleString()
+                        ) : post.likes > 0 || post.comments > 0 ? (
+                          <span
+                            className="text-[11px] font-semibold text-emerald-400 cursor-help flex items-center justify-center gap-1"
+                            title="Estimated viewer reach calculated from live Instagram likes and comments."
+                          >
+                            ~{(post.likes * 15 + post.comments * 25).toLocaleString()}
+                            <span className="text-[9px] bg-emerald-400/10 border border-emerald-400/20 text-emerald-400 px-1 py-0.2 rounded font-mono">Est</span>
+                          </span>
+                        ) : (
+                          "0"
+                        )}
                       </span>
                     </td>
 

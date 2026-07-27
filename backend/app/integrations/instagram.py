@@ -122,46 +122,85 @@ class InstagramService(BasePlatformConnector):
         }
 
     async def get_media_analytics(self, max_results: int = 25) -> list[dict]:
-        """Fetch user's Instagram posts/reels with like and comment metrics."""
+        """Fetch user's Instagram posts/reels with like, comment, and view/play count metrics."""
         items = []
         api_url = self._get_api_url()
+        is_basic_token = (self.account.access_token or "").startswith("IG")
+
         try:
             async with httpx.AsyncClient() as client:
-                resp = await client.get(
-                    f"{api_url}/me/media",
-                    params={
-                        "access_token": self.account.access_token,
-                        "fields": "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count",
-                        "limit": max_results,
-                    },
-                    timeout=10,
-                )
-                if resp.status_code != 200 and api_url != "https://graph.instagram.com":
+                for fields in [
+                    "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count,view_count,play_count",
+                    "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count",
+                ]:
                     resp = await client.get(
-                        "https://graph.instagram.com/me/media",
+                        f"{api_url}/me/media",
                         params={
                             "access_token": self.account.access_token,
-                            "fields": "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count",
+                            "fields": fields,
                             "limit": max_results,
                         },
                         timeout=10,
                     )
-                if resp.status_code == 200:
-                    for m in resp.json().get("data", []):
-                        caption_text = m.get("caption") or f"Instagram {m.get('media_type', 'Post')}"
-                        items.append({
-                            "id": m.get("id", ""),
-                            "title": caption_text,
-                            "caption": caption_text,
-                            "media_type": m.get("media_type", "IMAGE"),
-                            "thumbnail_url": m.get("thumbnail_url") or m.get("media_url", ""),
-                            "permalink": m.get("permalink", ""),
-                            "published_at": m.get("timestamp", ""),
-                            "views": 0,
-                            "likes": int(m.get("like_count", 0)),
-                            "reactions": int(m.get("like_count", 0)),
-                            "comments": int(m.get("comments_count", 0)),
-                        })
+                    if resp.status_code != 200 and api_url != "https://graph.instagram.com":
+                        resp = await client.get(
+                            "https://graph.instagram.com/me/media",
+                            params={
+                                "access_token": self.account.access_token,
+                                "fields": fields,
+                                "limit": max_results,
+                            },
+                            timeout=10,
+                        )
+                    if resp.status_code == 200:
+                        raw_items = resp.json().get("data", [])
+                        for m in raw_items:
+                            caption_text = m.get("caption") or f"Instagram {m.get('media_type', 'Post')}"
+                            m_id = m.get("id", "")
+                            media_type = m.get("media_type", "IMAGE")
+                            views = int(m.get("play_count") or m.get("view_count") or 0)
+
+                            # Query insights ONLY for Meta Graph Business/Creator tokens (not Basic Display IGAG... tokens)
+                            if views == 0 and media_type in ("VIDEO", "REELS") and not is_basic_token:
+                                try:
+                                    ins_resp = await client.get(
+                                        f"https://graph.facebook.com/v19.0/{m_id}/insights",
+                                        params={
+                                            "access_token": self.account.access_token,
+                                            "metric": "plays,reach",
+                                        },
+                                        timeout=5,
+                                    )
+                                    if ins_resp.status_code == 200:
+                                        ins_data = ins_resp.json().get("data", [])
+                                        for metric in ins_data:
+                                            if metric.get("name") in ("plays", "reach", "video_views"):
+                                                vals = metric.get("values", [])
+                                                if vals and isinstance(vals[0], dict):
+                                                    v_val = vals[0].get("value", 0)
+                                                    if v_val > views:
+                                                        views = int(v_val)
+                                except Exception:
+                                    pass
+
+                            likes_val = int(m.get("like_count") or m.get("likes_count") or 0)
+                            comments_val = int(m.get("comments_count") or m.get("comment_count") or 0)
+
+                            items.append({
+                                "id": m_id,
+                                "title": caption_text,
+                                "caption": caption_text,
+                                "media_type": media_type,
+                                "thumbnail_url": m.get("thumbnail_url") or m.get("media_url", ""),
+                                "permalink": m.get("permalink", ""),
+                                "published_at": m.get("timestamp", ""),
+                                "views": views,
+                                "likes": likes_val,
+                                "reactions": likes_val,
+                                "comments": comments_val,
+                                "is_basic_token": is_basic_token,
+                            })
+                        break
         except Exception:
             pass
         return items
