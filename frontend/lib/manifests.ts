@@ -16,22 +16,27 @@ const MEDIA_URL = process.env.NEXT_PUBLIC_MEDIA_URL ?? "http://localhost:8000";
  */
 export function diskPathToUrl(diskPath: string): string {
   if (!diskPath) return "";
-  // Already a URL
-  if (diskPath.startsWith("http")) return diskPath;
+  if (diskPath.startsWith("http://") || diskPath.startsWith("https://")) return diskPath;
 
   const dataMarker = "/packages/ClipPilot/data/";
-  const coversMarker = "/data/covers/";
+  const coversMarker = "/covers/";
 
   if (diskPath.includes(dataMarker)) {
     const rel = diskPath.split(dataMarker)[1];
-    return `${MEDIA_URL}/local-media/data/${rel}`;
+    return `/local-media/data/${rel}`;
   }
   if (diskPath.includes(coversMarker)) {
     const rel = diskPath.split(coversMarker)[1];
-    return `${MEDIA_URL}/local-media/covers/${rel}`;
+    return `/local-media/covers/${rel}`;
   }
 
-  return diskPath; // fallback — return as-is
+  // If filename starts with cover_ or is just a cover filename
+  if (diskPath.includes("cover_")) {
+    const filename = diskPath.split("/").pop();
+    return `/local-media/covers/${filename}`;
+  }
+
+  return diskPath;
 }
 
 // ── API Calls ─────────────────────────────────────────────────────────────────

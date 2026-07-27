@@ -142,7 +142,7 @@ export function ShortsList({ manifests, selectedId, loading, error, onSelect }: 
   }
 
   return (
-    <div className="flex flex-col gap-4 p-3 overflow-y-auto h-full">
+    <div className="flex-1 w-full p-3 space-y-4 touch-pan-y pb-28 md:pb-6 md:overflow-y-auto md:min-h-0">
       <div className="px-1 pb-1 flex items-center justify-between border-b border-outline-variant/40 pb-2">
         <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">
           Shorts Library ({manifests.length})

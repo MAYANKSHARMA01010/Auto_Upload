@@ -177,6 +177,11 @@ async def get_manifest(project_id: str) -> JSONResponse:
     if data is None:
         raise HTTPException(status_code=404, detail=f"Manifest for '{project_id}' not found on disk.")
 
+    raw_cover = data.get("assets", {}).get("default_cover_path", "")
+    resolved_cover = _resolve_cover_path(raw_cover, project_id)
+    if "assets" in data and isinstance(data["assets"], dict):
+        data["assets"]["default_cover_path"] = resolved_cover
+
     return JSONResponse(content=data)
 
 
