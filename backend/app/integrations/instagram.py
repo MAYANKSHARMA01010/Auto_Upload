@@ -79,37 +79,34 @@ class InstagramService(BasePlatformConnector):
         return "https://graph.facebook.com/v19.0"
 
     async def get_account_analytics(self) -> dict:
-        """Fetch Instagram profile details and followers count."""
+        """Fetch Instagram profile details and followers/following count with resilient field fallbacks."""
         api_url = self._get_api_url()
+
+        field_options = [
+            "id,username,name,profile_picture_url,followers_count,follows_count,media_count,biography",
+            "id,username,account_type,media_count,followers_count,follows_count",
+            "id,username,account_type,media_count",
+        ]
+
         try:
             async with httpx.AsyncClient() as client:
-                resp = await client.get(
-                    f"{api_url}/me",
-                    params={
-                        "access_token": self.account.access_token,
-                        "fields": "id,username,name,profile_picture_url,followers_count,media_count,biography",
-                    },
-                    timeout=10,
-                )
-                if resp.status_code != 200 and api_url != "https://graph.instagram.com":
+                for fields in field_options:
                     resp = await client.get(
-                        "https://graph.instagram.com/me",
-                        params={
-                            "access_token": self.account.access_token,
-                            "fields": "id,username,name,profile_picture_url,followers_count,media_count,biography",
-                        },
+                        f"{api_url}/me",
+                        params={"access_token": self.account.access_token, "fields": fields},
                         timeout=10,
                     )
-                if resp.status_code == 200:
-                    data = resp.json()
-                    return {
-                        "ig_id": data.get("id", ""),
-                        "username": data.get("username", self.account.username or "Instagram Account"),
-                        "name": data.get("name", ""),
-                        "profile_picture_url": data.get("profile_picture_url", ""),
-                        "followers": int(data.get("followers_count", 0)),
-                        "total_media": int(data.get("media_count", 0)),
-                    }
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        return {
+                            "ig_id": data.get("id", ""),
+                            "username": data.get("username", self.account.username or "Instagram Account"),
+                            "name": data.get("name", ""),
+                            "profile_picture_url": data.get("profile_picture_url", ""),
+                            "followers": int(data.get("followers_count", 0)),
+                            "following": int(data.get("follows_count", 0)),
+                            "total_media": int(data.get("media_count", 0)),
+                        }
         except Exception:
             pass
         return {
@@ -118,6 +115,7 @@ class InstagramService(BasePlatformConnector):
             "name": "",
             "profile_picture_url": "",
             "followers": 0,
+            "following": 0,
             "total_media": 0,
         }
 
@@ -127,12 +125,15 @@ class InstagramService(BasePlatformConnector):
         api_url = self._get_api_url()
         is_basic_token = (self.account.access_token or "").startswith("IG")
 
+        field_options = [
+            "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count,view_count,play_count",
+            "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count",
+            "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp",
+        ]
+
         try:
             async with httpx.AsyncClient() as client:
-                for fields in [
-                    "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count,view_count,play_count",
-                    "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count",
-                ]:
+                for fields in field_options:
                     resp = await client.get(
                         f"{api_url}/me/media",
                         params={
@@ -142,16 +143,6 @@ class InstagramService(BasePlatformConnector):
                         },
                         timeout=10,
                     )
-                    if resp.status_code != 200 and api_url != "https://graph.instagram.com":
-                        resp = await client.get(
-                            "https://graph.instagram.com/me/media",
-                            params={
-                                "access_token": self.account.access_token,
-                                "fields": fields,
-                                "limit": max_results,
-                            },
-                            timeout=10,
-                        )
                     if resp.status_code == 200:
                         raw_items = resp.json().get("data", [])
                         for m in raw_items:
@@ -159,6 +150,8 @@ class InstagramService(BasePlatformConnector):
                             m_id = m.get("id", "")
                             media_type = m.get("media_type", "IMAGE")
                             views = int(m.get("play_count") or m.get("view_count") or 0)
+                            likes_count = int(m.get("like_count", 0))
+                            comments_count = int(m.get("comments_count", 0))
 
                             # Query insights ONLY for Meta Graph Business/Creator tokens (not Basic Display IGAG... tokens)
                             if views == 0 and media_type in ("VIDEO", "REELS") and not is_basic_token:
@@ -178,27 +171,23 @@ class InstagramService(BasePlatformConnector):
                                                 vals = metric.get("values", [])
                                                 if vals and isinstance(vals[0], dict):
                                                     v_val = vals[0].get("value", 0)
-                                                    if v_val > views:
-                                                        views = int(v_val)
+                                                    if isinstance(v_val, int) and v_val > views:
+                                                        views = v_val
                                 except Exception:
                                     pass
-
-                            likes_val = int(m.get("like_count") or m.get("likes_count") or 0)
-                            comments_val = int(m.get("comments_count") or m.get("comment_count") or 0)
 
                             items.append({
                                 "id": m_id,
                                 "title": caption_text,
-                                "caption": caption_text,
-                                "media_type": media_type,
-                                "thumbnail_url": m.get("thumbnail_url") or m.get("media_url", ""),
-                                "permalink": m.get("permalink", ""),
+                                "message": caption_text,
+                                "thumbnail_url": m.get("thumbnail_url") or m.get("media_url") or "",
+                                "permalink": m.get("permalink") or f"https://www.instagram.com/p/{m_id}",
                                 "published_at": m.get("timestamp", ""),
                                 "views": views,
-                                "likes": likes_val,
-                                "reactions": likes_val,
-                                "comments": comments_val,
-                                "is_basic_token": is_basic_token,
+                                "likes": likes_count,
+                                "reactions": likes_count,
+                                "comments": comments_count,
+                                "shares": 0,
                             })
                         break
         except Exception:

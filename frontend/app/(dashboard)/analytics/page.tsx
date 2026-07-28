@@ -231,25 +231,43 @@ export default function AnalyticsPage() {
 
       {/* Channel / Page Hero Metrics Section */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Metric 1: Subscribers / Followers / Page Likes */}
+        {/* Metric 1: Subscribers / Followers & Following / Page Likes */}
         <div className="bg-surface-container-low border border-outline-variant p-4 rounded-2xl flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-              {selectedPlatform === "youtube" ? "Subscribers" : selectedPlatform === "instagram" ? "Followers" : "Page Likes"}
+              {selectedPlatform === "youtube" ? "Subscribers" : selectedPlatform === "instagram" ? "Followers & Following" : "Page Likes"}
             </span>
             <div className={`p-2 rounded-xl border ${activePlatObj.bg}`}>
               <FaUserGroup className={`text-base ${activePlatObj.color}`} />
             </div>
           </div>
-          <p className="text-2xl sm:text-3xl font-extrabold text-on-surface">
-            {accountMetrics.subscribers !== undefined
-              ? accountMetrics.subscribers.toLocaleString()
-              : accountMetrics.followers !== undefined
-              ? accountMetrics.followers.toLocaleString()
-              : accountMetrics.page_likes !== undefined
-              ? accountMetrics.page_likes.toLocaleString()
-              : "0"}
-          </p>
+          {selectedPlatform === "instagram" ? (
+            <div className="flex items-baseline gap-2.5">
+              <div>
+                <p className="text-2xl sm:text-3xl font-extrabold text-on-surface leading-tight">
+                  {(accountMetrics.followers ?? 0).toLocaleString()}
+                </p>
+                <p className="text-[10px] font-bold text-emerald-400">Followers</p>
+              </div>
+              <span className="text-on-surface-variant/40 text-lg font-light">/</span>
+              <div>
+                <p className="text-xl sm:text-2xl font-bold text-on-surface-variant leading-tight">
+                  {(accountMetrics.following ?? 0).toLocaleString()}
+                </p>
+                <p className="text-[10px] font-semibold text-on-surface-variant/70">Following</p>
+              </div>
+            </div>
+          ) : (
+            <p className="text-2xl sm:text-3xl font-extrabold text-on-surface">
+              {accountMetrics.subscribers !== undefined
+                ? accountMetrics.subscribers.toLocaleString()
+                : accountMetrics.followers !== undefined
+                ? accountMetrics.followers.toLocaleString()
+                : accountMetrics.page_likes !== undefined
+                ? accountMetrics.page_likes.toLocaleString()
+                : "0"}
+            </p>
+          )}
           <p className="text-[10px] text-on-surface-variant mt-1">Live from {activePlatObj.label} API</p>
         </div>
 

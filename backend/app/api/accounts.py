@@ -307,6 +307,23 @@ async def oauth_callback(
                     platform_user_id = str(tdata.get("user_id", ""))
                     ig_username = tdata.get("username", "")
 
+                    # Exchange short-lived IG token for 60-day long-lived token
+                    if access_token and settings.INSTAGRAM_CLIENT_SECRET:
+                        try:
+                            ll_resp = await client.get(
+                                "https://graph.instagram.com/access_token",
+                                params={
+                                    "grant_type": "ig_exchange_token",
+                                    "client_secret": settings.INSTAGRAM_CLIENT_SECRET,
+                                    "access_token": access_token,
+                                },
+                                timeout=10,
+                            )
+                            if ll_resp.status_code == 200:
+                                access_token = str(ll_resp.json().get("access_token", access_token))
+                        except Exception:
+                            pass
+
                     if not ig_username:
                         for test_url, test_params in [
                             ("https://graph.instagram.com/v19.0/me", {"fields": "id,username,account_type", "access_token": access_token}),
@@ -319,7 +336,7 @@ async def oauth_callback(
                                     ig_username = pdata.get("username", "") or pdata.get("name", "")
                                     if ig_username:
                                         break
-                            except Exception as e:
+                            except Exception:
                                 pass
 
                     username = ig_username or f"Instagram ({platform_user_id[:8]})"
