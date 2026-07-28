@@ -102,7 +102,7 @@ export default function ShortsFactoryPage() {
   const selectedSummary = manifests.find((m) => m.id === selectedId);
 
   return (
-    <div className="flex flex-col h-auto md:h-full overflow-visible md:overflow-hidden bg-background">
+    <div className="flex flex-col h-full min-h-0 overflow-hidden bg-background">
       {/* ── Mobile Navigation Tabs (visible on < md screens) ── */}
       <div className="md:hidden flex items-center justify-around border-b border-outline-variant bg-surface-container-low p-2 gap-1 flex-shrink-0">
         <button
@@ -143,9 +143,9 @@ export default function ShortsFactoryPage() {
       </div>
 
       {/* ── Responsive Main Layout Container ── */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-visible md:overflow-hidden">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
         {/* ── COLUMN 1: Shorts List (Responsive Width) ─────────────────── */}
-        <div className={`w-full md:w-60 lg:w-72 xl:w-80 flex-shrink-0 border-r border-outline-variant flex flex-col bg-surface-container-lowest ${
+        <div className={`w-full md:w-60 lg:w-72 xl:w-80 flex-shrink-0 border-r border-outline-variant flex flex-col bg-surface-container-lowest h-full min-h-0 overflow-hidden ${
           mobileTab !== "library" ? "hidden md:flex" : "flex"
         }`}>
           {/* Header */}
@@ -160,7 +160,7 @@ export default function ShortsFactoryPage() {
           </div>
 
           {/* List */}
-          <div className="flex-1 w-full flex flex-col">
+          <div className="flex-1 w-full flex flex-col min-h-0 overflow-hidden">
             {scanError && manifests.length === 0 && !scanLoading ? (
               <div className="p-3">
                 <div className="rounded-xl bg-surface-container border border-outline-variant p-3 text-center">
@@ -196,7 +196,7 @@ export default function ShortsFactoryPage() {
           </div>
 
           {/* Player content */}
-          <div className="flex-1 overflow-y-auto p-4 flex flex-col items-center justify-center">
+          <div className="flex-1 overflow-hidden p-3 flex flex-col items-center justify-center min-h-0">
             {detailLoading ? (
               <div className="flex items-center justify-center h-full">
                 <div className="flex flex-col items-center gap-3">

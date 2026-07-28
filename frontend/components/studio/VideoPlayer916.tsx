@@ -24,6 +24,7 @@ export function VideoPlayer916({ videoPath, coverPath, projectTitle, onCoverCapt
   const [videoError, setVideoError] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
   const [showCoverOptions, setShowCoverOptions] = useState(false);
+  const [isFullscreenModal, setIsFullscreenModal] = useState(false);
 
   const videoUrl = diskPathToUrl(videoPath);
   const coverUrl = diskPathToUrl(coverPath);
@@ -37,7 +38,17 @@ export function VideoPlayer916({ videoPath, coverPath, projectTitle, onCoverCapt
     setSelectedCoverTs(null);
     setVideoError(false);
     setShowCoverOptions(false);
+    setIsFullscreenModal(false);
   }, [videoPath]);
+
+  // ESC key listener for Fullscreen modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsFullscreenModal(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const togglePlay = () => {
     const v = videoRef.current;
@@ -105,6 +116,64 @@ export function VideoPlayer916({ videoPath, coverPath, projectTitle, onCoverCapt
     onCoverCapture?.(ts);
   };
 
+  const handleFullscreen = () => {
+    setIsFullscreenModal((prev) => !prev);
+  };
+
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownloadOriginal = async () => {
+    if (!videoUrl || isDownloading) return;
+    setIsDownloading(true);
+
+    const cleanTitle = (projectTitle || "short_video")
+      .replace(/[^a-zA-Z0-9_\-\s]/g, "")
+      .trim()
+      .replace(/\s+/g, "_");
+    const suggestedName = `${cleanTitle}_original_max_quality.mp4`;
+
+    try {
+      // 1. Native OS "Save As..." File Picker API (Asks user where to save file!)
+      if ("showSaveFilePicker" in window) {
+        try {
+          const handle = await (window as any).showSaveFilePicker({
+            suggestedName,
+            types: [
+              {
+                description: "MP4 Video File",
+                accept: { "video/mp4": [".mp4"] },
+              },
+            ],
+          });
+          const response = await fetch(videoUrl);
+          const blob = await response.blob();
+          const writable = await handle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+          return;
+        } catch (err: any) {
+          if (err.name === "AbortError") return; // User cancelled save dialog
+        }
+      }
+
+      // 2. Fallback: Fetch blob & trigger link download
+      const res = await fetch(videoUrl);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = suggestedName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch {
+      window.open(videoUrl, "_blank");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   const formatTime = (s: number) => {
     if (!s || isNaN(s)) return "0:00";
     const m = Math.floor(s / 60);
@@ -113,19 +182,20 @@ export function VideoPlayer916({ videoPath, coverPath, projectTitle, onCoverCapt
   };
 
   return (
-    <div className="flex flex-col items-center justify-between gap-3 h-full w-full overflow-y-auto pb-4 pr-1">
+    <div className="flex flex-col items-center justify-between gap-2.5 h-full w-full overflow-hidden no-scrollbar pb-2 pr-0.5">
       {/* 9:16 Video Container (Fills Full Available Column Height) */}
       <div className="relative rounded-2xl overflow-hidden bg-black shadow-2xl border border-outline-variant flex-1 min-h-[480px] w-full max-w-[310px] aspect-[9/16]">
         {videoUrl && !videoError ? (
           <video
             ref={videoRef}
             src={videoUrl}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover cursor-pointer"
             playsInline
             onTimeUpdate={handleTimeUpdate}
             onLoadedMetadata={handleLoadedMetadata}
             onEnded={() => setIsPlaying(false)}
             onError={() => setVideoError(true)}
+            onDoubleClick={handleFullscreen}
             preload="metadata"
           />
         ) : (
@@ -164,9 +234,18 @@ export function VideoPlayer916({ videoPath, coverPath, projectTitle, onCoverCapt
           </button>
         )}
 
-        {/* 9:16 badge */}
-        <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm rounded-full px-2 py-0.5">
-          <span className="text-[9px] text-white font-mono font-bold">9:16</span>
+        {/* Top right badges & Fullscreen button */}
+        <div className="absolute top-2 right-2 flex items-center gap-1.5 z-20">
+          <button
+            onClick={handleFullscreen}
+            className="bg-black/60 hover:bg-black/80 backdrop-blur-sm rounded-full p-1 text-white transition-all border border-white/20 shadow-md"
+            title="View Fullscreen (Double click video)"
+          >
+            <span className="material-symbols-outlined text-sm block">fullscreen</span>
+          </button>
+          <div className="bg-black/60 backdrop-blur-sm rounded-full px-2 py-0.5 border border-white/10">
+            <span className="text-[9px] text-white font-mono font-bold">9:16</span>
+          </div>
         </div>
 
         {/* Title overlay */}
@@ -180,7 +259,7 @@ export function VideoPlayer916({ videoPath, coverPath, projectTitle, onCoverCapt
 
       {/* Timeline & Controls */}
       {videoUrl && !videoError && (
-        <div className="w-full max-w-[310px] space-y-2.5 flex-shrink-0 px-1">
+        <div className="w-full max-w-[310px] space-y-2 flex-shrink-0 px-1">
           {/* Progress Bar & Play Toggle */}
           <div className="flex items-center gap-2.5">
             <button
@@ -212,12 +291,22 @@ export function VideoPlayer916({ videoPath, coverPath, projectTitle, onCoverCapt
             </div>
           </div>
 
-          {/* Volume & Toggle Cover Options */}
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 flex-1">
-              <span className="material-symbols-outlined text-on-surface-variant text-base">
-                {volume === 0 ? "volume_off" : volume < 0.5 ? "volume_down" : "volume_up"}
-              </span>
+          {/* Volume, Fullscreen, Download & Toggle Cover Options */}
+          <div className="flex items-center justify-between gap-1.5 pt-0.5">
+            <div className="flex items-center gap-1 flex-1">
+              <button
+                onClick={() => {
+                  const newVol = volume === 0 ? 0.8 : 0;
+                  setVolume(newVol);
+                  if (videoRef.current) videoRef.current.volume = newVol;
+                }}
+                className="p-1 text-on-surface-variant hover:text-on-surface transition-colors"
+                title="Toggle Mute"
+              >
+                <span className="material-symbols-outlined text-lg">
+                  {volume === 0 ? "volume_off" : volume < 0.5 ? "volume_down" : "volume_up"}
+                </span>
+              </button>
               <input
                 type="range"
                 min={0}
@@ -225,20 +314,36 @@ export function VideoPlayer916({ videoPath, coverPath, projectTitle, onCoverCapt
                 step={0.05}
                 value={volume}
                 onChange={handleVolumeChange}
-                className="w-24 h-2 rounded-lg cursor-pointer appearance-none transition-all"
+                className="w-16 h-1.5 rounded-lg cursor-pointer appearance-none transition-all"
                 style={{
                   accentColor: "#a5b4fc",
                   background: `linear-gradient(to right, #818cf8 ${volume * 100}%, rgba(255, 255, 255, 0.18) ${volume * 100}%)`,
                 }}
               />
             </div>
-            <button
-              onClick={() => setShowCoverOptions(!showCoverOptions)}
-              className="text-xs text-primary hover:text-primary/80 flex items-center gap-1.5 bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-lg transition-colors font-medium"
-            >
-              <span className="material-symbols-outlined text-sm">photo_camera</span>
-              <span>{showCoverOptions ? "Hide Covers" : "Select Cover"}</span>
-            </button>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={handleDownloadOriginal}
+                disabled={!videoUrl || videoError || isDownloading}
+                className="text-xs text-emerald-400 hover:text-emerald-300 disabled:opacity-40 flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg transition-colors font-medium shadow-sm"
+                title="Download Original Master Video (Uncompressed 4K/1080p, Max FPS & Bitrate)"
+              >
+                <span className={`material-symbols-outlined text-sm ${isDownloading ? "animate-spin" : ""}`}>
+                  {isDownloading ? "sync" : "download"}
+                </span>
+                <span>{isDownloading ? "Saving…" : "Download"}</span>
+              </button>
+
+              <button
+                onClick={() => setShowCoverOptions(!showCoverOptions)}
+                className="text-xs text-primary hover:text-primary/80 flex items-center gap-1 bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-lg transition-colors font-medium"
+                title="Select Cover Frame"
+              >
+                <span className="material-symbols-outlined text-sm">photo_camera</span>
+                <span>{showCoverOptions ? "Hide" : "Cover"}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -293,6 +398,55 @@ export function VideoPlayer916({ videoPath, coverPath, projectTitle, onCoverCapt
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── 9:16 Fullscreen Modal (Preserves 9:16 aspect ratio 100%, never stretching to 16:9!) ── */}
+      {isFullscreenModal && videoUrl && !videoError && (
+        <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-4 animate-in fade-in duration-200">
+          {/* Top header bar */}
+          <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10 px-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-white truncate max-w-[300px]">{projectTitle}</span>
+              <span className="text-[10px] text-emerald-400 font-mono bg-emerald-500/20 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
+                9:16 Master Aspect Ratio
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleDownloadOriginal}
+                className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1.5 bg-emerald-500/20 border border-emerald-500/30 px-3 py-1.5 rounded-xl transition-all font-semibold"
+                title="Download Original Master Video (Uncompressed 4K/1080p, Max FPS & Bitrate)"
+              >
+                <span className="material-symbols-outlined text-base">download</span>
+                <span>Download Master</span>
+              </button>
+
+              <button
+                onClick={() => setIsFullscreenModal(false)}
+                className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all border border-white/20"
+                title="Close Fullscreen (Esc)"
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 9:16 Video Player Box */}
+          <div className="relative h-[82vh] max-h-[850px] aspect-[9/16] rounded-2xl overflow-hidden shadow-2xl border border-white/20 bg-black flex items-center justify-center">
+            <video
+              src={videoUrl}
+              className="w-full h-full object-contain cursor-pointer"
+              autoPlay
+              playsInline
+              controls
+              onEnded={() => setIsPlaying(false)}
+            />
+          </div>
+
+          {/* Bottom ESC hint */}
+          <p className="text-[11px] text-white/50 font-mono mt-3">Press Esc or click Close to exit</p>
         </div>
       )}
     </div>
