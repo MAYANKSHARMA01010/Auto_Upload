@@ -46,7 +46,7 @@ export async function fetchManifests(token?: string): Promise<{ manifests: Manif
     const headers: HeadersInit = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    const res = await fetch(`${BASE}/manifests/scan`, { headers });
+    const res = await fetch(`${BASE}/manifests/scan`, { headers, cache: "no-store" });
     if (!res.ok) return { manifests: [], error: `Server returned ${res.status}` };
     const data = await res.json();
     return { manifests: data.manifests ?? [], error: data.error };
@@ -60,7 +60,7 @@ export async function fetchManifest(id: string, token?: string): Promise<Manifes
     const headers: HeadersInit = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    const res = await fetch(`${BASE}/manifests/${id}`, { headers });
+    const res = await fetch(`${BASE}/manifests/${id}`, { headers, cache: "no-store" });
     if (!res.ok) return null;
     return res.json();
   } catch {

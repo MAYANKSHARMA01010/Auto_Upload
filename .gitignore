@@ -1,19 +1,72 @@
-backend/__pycache__
-backend/.venv
+# ==============================================================================
+# Auto_Upload (ClipScheduler) — Comprehensive .gitignore
+# ==============================================================================
+
+# ── Environment & Secrets ──────────────────────────────────────────────────────
+.env
+.env.*
+*.env
+!.env.example
 backend/.env
-
-backend/app/api/__pycache__
-backend/app/core/__pycache__
-backend/app/database/__pycache__
-backend/app/integrations/__pycache__
-backend/app/models/__pycache__
-backend/app/schemas/__pycache__
-backend/app/services/__pycache__
-backend/app/workers/__pycache__
-backend/.persistent_cache.json
-
-frontend/.next
-frontend/node_modules
 frontend/.env
-frontend/next-env.d.ts
 
+# ── Python / Virtual Environments ──────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+backend/__pycache__/
+backend/*/__pycache__/
+backend/*/*/__pycache__/
+backend/*/*/*/__pycache__/
+.venv/
+venv/
+ENV/
+env/
+backend/.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# ── Node.js / Next.js / Frontend ──────────────────────────────────────────────
+node_modules/
+frontend/node_modules/
+.next/
+frontend/.next/
+out/
+frontend/out/
+build/
+dist/
+.turbo/
+*.tsbuildinfo
+frontend/tsconfig.tsbuildinfo
+next-env.d.ts
+frontend/next-env.d.ts
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-debug.log*
+
+# ── Local Persistent Caches & Temporary Artifacts ──────────────────────────────
+backend/.persistent_cache.json
+*.persistent_cache.json
+*.cache
+*.log
+scratch/
+.gemini/
+.agents/
+.system_generated/
+
+# ── Operating System Junk ─────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

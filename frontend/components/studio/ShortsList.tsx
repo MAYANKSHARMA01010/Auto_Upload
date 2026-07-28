@@ -86,10 +86,43 @@ function CoverImage({ coverPath, title }: { coverPath: string; title: string }) 
   );
 }
 
+function getVideoDurationSeconds(m: ManifestSummary): number {
+  if (typeof m.duration === "number" && m.duration > 0) {
+    return m.duration;
+  }
+  if (m.duration_formatted) {
+    const parts = m.duration_formatted.split(":").map((p) => parseInt(p, 10));
+    if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+      return parts[0] * 60 + parts[1];
+    }
+    if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+      return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    }
+  }
+  return 0; // Default treat as short
+}
+
 export function ShortsList({ manifests, selectedId, loading, error, onSelect }: ShortsListProps) {
+  const [filterType, setFilterType] = useState<"all" | "shorts" | "long">("all");
+
+  const shortsCount = useMemo(
+    () => manifests.filter((m) => getVideoDurationSeconds(m) <= 180).length,
+    [manifests]
+  );
+  const longCount = useMemo(
+    () => manifests.filter((m) => getVideoDurationSeconds(m) > 180).length,
+    [manifests]
+  );
+
+  const filteredList = useMemo(() => {
+    if (filterType === "shorts") return manifests.filter((m) => getVideoDurationSeconds(m) <= 180);
+    if (filterType === "long") return manifests.filter((m) => getVideoDurationSeconds(m) > 180);
+    return manifests;
+  }, [manifests, filterType]);
+
   // Group manifests by date
   const groupedManifests = useMemo(() => {
-    const sorted = [...manifests].sort((a, b) => {
+    const sorted = [...filteredList].sort((a, b) => {
       const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
       const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
       return timeB - timeA;
@@ -102,7 +135,7 @@ export function ShortsList({ manifests, selectedId, loading, error, onSelect }: 
       groups[groupKey].push(m);
     }
     return groups;
-  }, [manifests]);
+  }, [filteredList]);
 
   if (loading) {
     return (
@@ -142,11 +175,58 @@ export function ShortsList({ manifests, selectedId, loading, error, onSelect }: 
   }
 
   return (
-    <div className="flex-1 w-full p-3 space-y-4 overflow-y-auto min-h-0 touch-pan-y pb-28 md:pb-6 no-scrollbar">
-      <div className="px-1 pb-1 flex items-center justify-between border-b border-outline-variant/40 pb-2">
-        <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">
-          Shorts Library ({manifests.length})
-        </span>
+    <div className="flex-1 w-full p-3 space-y-3.5 overflow-y-auto min-h-0 touch-pan-y pb-28 md:pb-6 no-scrollbar">
+      {/* Category Tabs Header */}
+      <div className="flex flex-col gap-2 border-b border-outline-variant/40 pb-2.5">
+        <div className="px-1 flex items-center justify-between">
+          <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">
+            Library ({filteredList.length})
+          </span>
+        </div>
+
+        {/* Filter Tabs: All | Shorts (<3m) | Long (>3m) */}
+        <div className="grid grid-cols-3 gap-1 bg-surface-container/80 p-1 rounded-xl border border-outline-variant/50">
+          <button
+            onClick={() => setFilterType("all")}
+            className={[
+              "py-1 px-1.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-all",
+              filterType === "all"
+                ? "bg-primary text-on-primary shadow-sm"
+                : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high",
+            ].join(" ")}
+          >
+            <span>All</span>
+            <span className="text-[9px] opacity-75 font-mono">({manifests.length})</span>
+          </button>
+
+          <button
+            onClick={() => setFilterType("shorts")}
+            className={[
+              "py-1 px-1.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-all",
+              filterType === "shorts"
+                ? "bg-primary text-on-primary shadow-sm"
+                : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high",
+            ].join(" ")}
+            title="Shorts (< 3 mins)"
+          >
+            <span>Shorts</span>
+            <span className="text-[9px] opacity-75 font-mono">({shortsCount})</span>
+          </button>
+
+          <button
+            onClick={() => setFilterType("long")}
+            className={[
+              "py-1 px-1.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-all",
+              filterType === "long"
+                ? "bg-primary text-on-primary shadow-sm"
+                : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high",
+            ].join(" ")}
+            title="Long Videos (> 3 mins)"
+          >
+            <span>Long</span>
+            <span className="text-[9px] opacity-75 font-mono">({longCount})</span>
+          </button>
+        </div>
       </div>
 
       {Object.entries(groupedManifests).map(([groupDate, items]) => (
@@ -183,10 +263,15 @@ export function ShortsList({ manifests, selectedId, loading, error, onSelect }: 
                     {/* Cover thumbnail */}
                     <div className="w-14 h-20 rounded-lg bg-surface-container-high overflow-hidden flex-shrink-0 relative border border-white/5">
                       <CoverImage coverPath={m.cover_path} title={m.title} />
-                      {/* duration / 9:16 overlay badge */}
+                      {/* duration / category overlay badge */}
                       <div className="absolute bottom-1 right-1 bg-black/80 backdrop-blur-sm rounded px-1 py-0.5 flex items-center gap-0.5">
-                        <span className="text-[9px] text-white font-mono font-medium">
-                          {m.duration_formatted || "9:16"}
+                        <span className="text-[9px] text-white font-mono font-medium flex items-center gap-0.5">
+                          {getVideoDurationSeconds(m) > 180 ? (
+                            <span className="text-[8px] text-indigo-300 font-bold">🎬</span>
+                          ) : (
+                            <span className="text-[8px] text-amber-300 font-bold">⚡</span>
+                          )}
+                          {m.duration_formatted || "0:00"}
                         </span>
                       </div>
                     </div>
