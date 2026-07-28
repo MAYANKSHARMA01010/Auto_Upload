@@ -47,8 +47,29 @@ class Settings(BaseSettings):
 
     # Database & Caching
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/clipscheduler"
+    DATABASE_CACHE_URL: str = ""
     REDIS_LOCAL_URL: str = ""
     REDIS_HOSTED_URL: str = ""
+
+    @property
+    def formatted_database_url(self) -> str:
+        url = self.DATABASE_URL
+        if url.startswith("postgresql://"):
+            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        if "sslmode=" in url:
+            url = url.replace("sslmode=", "ssl=")
+        url = url.replace("&channel_binding=require", "").replace("?channel_binding=require", "")
+        return url
+
+    @property
+    def formatted_database_cache_url(self) -> str:
+        url = self.DATABASE_CACHE_URL or self.DATABASE_URL
+        if url.startswith("postgresql://"):
+            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        if "sslmode=" in url:
+            url = url.replace("sslmode=", "ssl=")
+        url = url.replace("&channel_binding=require", "").replace("?channel_binding=require", "")
+        return url
 
     @property
     def active_redis_url(self) -> str:

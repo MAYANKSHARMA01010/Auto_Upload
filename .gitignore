@@ -10,6 +10,7 @@ backend/app/models/__pycache__
 backend/app/schemas/__pycache__
 backend/app/services/__pycache__
 backend/app/workers/__pycache__
+backend/.persistent_cache.json
 
 frontend/.next
 frontend/node_modules

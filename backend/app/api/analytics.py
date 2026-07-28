@@ -9,10 +9,11 @@ from sqlalchemy import and_, or_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_service
-from app.core.dependencies import get_current_user, get_db
+from app.core.dependencies import get_current_user, get_db, get_cache_db
 from app.integrations.youtube import YouTubeService
 from app.integrations.instagram import InstagramService
 from app.integrations.facebook import FacebookService
+from app.models.analytics_cache import AnalyticsCache
 from app.models.connected_account import ConnectedAccount
 from app.models.scheduled_post import Platform, PostStatus, ScheduledPost
 from app.models.user import User
@@ -101,42 +102,57 @@ async def get_timeline(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Return daily post counts for the last N days (cached)."""
-    cache_key = f"user_analytics_timeline:{current_user.id}:{days}"
-    cached = await cache_service.get(cache_key)
-    if cached is not None:
-        return [TimelinePoint.model_validate(p) for p in cached]
+    """Return daily post publishing counts for chart over last N days."""
+    now = datetime.now(timezone.utc)
+    start_date = now - timedelta(days=days)
 
-    start = datetime.now(timezone.utc) - timedelta(days=days)
-    timeline = []
-
-    for i in range(days):
-        day = start + timedelta(days=i)
-        day_start = day.replace(hour=0, minute=0, second=0, microsecond=0)
-        day_end = day_start + timedelta(days=1)
-
-        async def day_count(s):
-            q = select(func.count()).where(
-                and_(
-                    ScheduledPost.user_id == current_user.id,
-                    ScheduledPost.status == s,
-                    ScheduledPost.updated_at >= day_start,
-                    ScheduledPost.updated_at < day_end,
-                )
+    query = (
+        select(
+            func.date(ScheduledPost.published_at).label("day"),
+            ScheduledPost.platform,
+            func.count().label("cnt"),
+        )
+        .where(
+            and_(
+                ScheduledPost.user_id == current_user.id,
+                ScheduledPost.status == PostStatus.PUBLISHED,
+                ScheduledPost.published_at >= start_date,
             )
-            return (await db.execute(q)).scalar_one()
+        )
+        .group_by(func.date(ScheduledPost.published_at), ScheduledPost.platform)
+        .order_by("day")
+    )
 
+    res = await db.execute(query)
+    rows = res.all()
+
+    # Aggregate by day
+    by_day: dict[str, dict[str, int]] = {}
+    for r in rows:
+        d_str = str(r.day)
+        if d_str not in by_day:
+            by_day[d_str] = {}
+        p_name = r.platform.value if hasattr(r.platform, "value") else str(r.platform)
+        by_day[d_str][p_name] = r.cnt
+
+    timeline = []
+    for i in range(days):
+        day_dt = (start_date + timedelta(days=i)).date()
+        d_str = str(day_dt)
+        counts = by_day.get(d_str, {})
         timeline.append(
             TimelinePoint(
-                date=day_start.strftime("%Y-%m-%d"),
-                published=await day_count(PostStatus.PUBLISHED),
-                failed=await day_count(PostStatus.FAILED),
-                scheduled=await day_count(PostStatus.SCHEDULED),
+                date=d_str,
+                published=sum(counts.values()),
+                youtube=counts.get("youtube", 0),
+                instagram=counts.get("instagram", 0),
+                facebook=counts.get("facebook", 0),
+                tiktok=counts.get("tiktok", 0),
+                threads=counts.get("threads", 0),
+                x=counts.get("x", 0),
             )
         )
 
-    res_data = [t.model_dump(mode="json") for t in timeline]
-    await cache_service.set(cache_key, res_data, ttl_seconds=300)
     return timeline
 
 
@@ -144,14 +160,33 @@ async def get_timeline(
 async def get_social_insights(
     platform: str = Query("youtube"),
     account_id: Optional[str] = Query(None),
+    refresh: bool = Query(False),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    cache_db: AsyncSession = Depends(get_cache_db),
 ):
     """
-    Return dynamic per-account analytics and video metrics directly from connected accounts and database posts.
-    No hardcoded mock data.
+    Return per-account analytics (cached for 24h in PostgreSQL table analytics_cache).
+    Shared seamlessly across Phone, Mac, and Laptop devices.
+    Pass refresh=true to force a live API update.
     """
     p_lower = platform.lower()
+    cache_key = f"social_insights:{current_user.id}:{p_lower}:{account_id or 'default'}"
+    now_utc = datetime.now(timezone.utc)
+
+    # 1. Check Dedicated Cache Database first (if not forcing refresh)
+    if not refresh:
+        cache_query = select(AnalyticsCache).where(
+            and_(
+                AnalyticsCache.user_id == current_user.id,
+                AnalyticsCache.cache_key == cache_key,
+                AnalyticsCache.expires_at > now_utc,
+            )
+        )
+        cache_res = await cache_db.execute(cache_query)
+        cached_record = cache_res.scalar_one_or_none()
+        if cached_record and cached_record.data:
+            return cached_record.data
 
     # 1. Query connected accounts for this platform
     acc_query = select(ConnectedAccount).where(
@@ -263,7 +298,7 @@ async def get_social_insights(
             "error_message": post.error_message,
         })
 
-    return {
+    response_data = {
         "platform": p_lower,
         "connected_accounts": platform_accounts,
         "selected_account": selected_account_dict,
@@ -277,4 +312,31 @@ async def get_social_insights(
             "drafts": draft_count,
         },
         "videos": local_videos,
+        "cached_at": now_utc.isoformat(),
     }
+
+    # Upsert to Dedicated Cache Database analytics_cache table
+    expires_at = now_utc + timedelta(hours=24)
+    existing_cache_query = select(AnalyticsCache).where(
+        and_(
+            AnalyticsCache.user_id == current_user.id,
+            AnalyticsCache.cache_key == cache_key,
+        )
+    )
+    existing_cache = (await cache_db.execute(existing_cache_query)).scalar_one_or_none()
+
+    if existing_cache:
+        existing_cache.data = response_data
+        existing_cache.expires_at = expires_at
+    else:
+        new_cache = AnalyticsCache(
+            user_id=current_user.id,
+            cache_key=cache_key,
+            data=response_data,
+            expires_at=expires_at,
+        )
+        cache_db.add(new_cache)
+
+    await cache_db.commit()
+    await cache_service.set(cache_key, response_data, ttl_seconds=86400)
+    return response_data

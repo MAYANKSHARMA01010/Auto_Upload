@@ -7,6 +7,7 @@ from app.models.scheduled_post import ScheduledPost, PostStatus, Platform
 from app.models.connected_account import ConnectedAccount
 from app.models.activity_log import ActivityLog, ActivityAction
 from app.models.setting import UserSetting
+from app.models.analytics_cache import AnalyticsCache
 
 __all__ = [
     "User",
@@ -18,4 +19,5 @@ __all__ = [
     "ActivityLog",
     "ActivityAction",
     "UserSetting",
+    "AnalyticsCache",
 ]

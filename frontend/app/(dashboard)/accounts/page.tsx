@@ -396,6 +396,21 @@ function AccountCard({
   const [editUsername, setEditUsername] = useState(account.username || "");
   const [editHandle, setEditHandle] = useState(account.handle || "");
   const [saving, setSaving] = useState(false);
+  const [refreshingLive, setRefreshingLive] = useState(false);
+
+  const handleRefreshAccount = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      setRefreshingLive(true);
+      await api.get(`/analytics/social-insights?platform=${account.platform}&account_id=${account.id}&refresh=true`);
+      toast.success(`Refreshed live metrics for ${account.username || platformDef.name}!`);
+      onRefresh();
+    } catch {
+      toast.error(`Failed to refresh metrics for ${account.username}`);
+    } finally {
+      setRefreshingLive(false);
+    }
+  };
 
   const handleSave = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -427,7 +442,7 @@ function AccountCard({
       <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-br ${platformDef.cardAccent} transition-opacity duration-300 pointer-events-none`} />
 
       <div className="relative p-5 flex-1 flex flex-col justify-between space-y-4">
-        {/* Top row: shiny status dot next to pencil icon + delete icon */}
+        {/* Top row: shiny status dot next to refresh + pencil + delete icons */}
         <div className="flex items-center justify-end w-full">
           <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
             {account.is_active ? (
@@ -440,6 +455,16 @@ function AccountCard({
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.9)] ring-2 ring-red-500/40" />
               </span>
             )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-primary transition-colors"
+              title="Refresh Live Analytics & Cache"
+              disabled={refreshingLive}
+              onClick={handleRefreshAccount}
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${refreshingLive ? "animate-spin text-primary" : ""}`} />
+            </Button>
             <Button
               variant="ghost"
               size="icon"

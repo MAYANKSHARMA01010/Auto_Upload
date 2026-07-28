@@ -9,15 +9,28 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import verify_token
-from app.database.session import AsyncSessionLocal
+from app.database.session import AsyncSessionLocal, AsyncCacheSessionLocal
 from app.models.user import User
 
 bearer_scheme = HTTPBearer()
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """Dependency that yields an async SQLAlchemy session."""
+    """Dependency that yields an async SQLAlchemy session for Primary DB."""
     async with AsyncSessionLocal() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
+
+
+async def get_cache_db() -> AsyncGenerator[AsyncSession, None]:
+    """Dependency that yields an async SQLAlchemy session for Dedicated Cache DB."""
+    async with AsyncCacheSessionLocal() as session:
         try:
             yield session
             await session.commit()

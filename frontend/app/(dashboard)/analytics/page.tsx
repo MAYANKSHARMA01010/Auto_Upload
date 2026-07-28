@@ -46,9 +46,13 @@ export default function AnalyticsPage() {
     if (a) setSelectedAccountId(a);
   }, [searchParams]);
 
-  // Fetch social insights for target platform & account
-  const { data: insights, isLoading: loadingInsights } = useQuery({
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Fetch social insights for target platform & account (cached 24h)
+  const { data: insights, isLoading: loadingInsights, refetch } = useQuery({
     queryKey: ["social-insights", selectedPlatform, selectedAccountId],
+    staleTime: 1000 * 60 * 60 * 24, // 24 Hours persistent cache
+    gcTime: 1000 * 60 * 60 * 24,
     queryFn: async () => {
       const params = new URLSearchParams({ platform: selectedPlatform });
       if (selectedAccountId) params.append("account_id", selectedAccountId);
@@ -56,6 +60,18 @@ export default function AnalyticsPage() {
       return res.data;
     },
   });
+
+  const handleManualRefresh = async () => {
+    try {
+      setIsRefreshing(true);
+      const params = new URLSearchParams({ platform: selectedPlatform, refresh: "true" });
+      if (selectedAccountId) params.append("account_id", selectedAccountId);
+      await api.get(`/analytics/social-insights?${params.toString()}`);
+      await refetch();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const activePlatObj = PLATFORMS.find((p) => p.id === selectedPlatform) || PLATFORMS[0];
   const IconComp = activePlatObj.icon;
@@ -175,6 +191,18 @@ export default function AnalyticsPage() {
               All Time
             </button>
           </div>
+
+          <button
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-container border border-outline-variant hover:bg-surface-container-high text-xs font-semibold text-on-surface transition-all disabled:opacity-50"
+            title="Fetch fresh live metrics from platform APIs"
+          >
+            <span className={`material-symbols-outlined text-sm ${isRefreshing ? "animate-spin text-primary" : "text-on-surface-variant"}`}>
+              refresh
+            </span>
+            <span>{isRefreshing ? "Refreshing..." : "Refresh Data"}</span>
+          </button>
 
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-400/10 border border-emerald-400/20">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
