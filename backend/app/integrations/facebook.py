@@ -22,7 +22,7 @@ class FacebookService(BasePlatformConnector):
         params = {
             "client_id": settings.FACEBOOK_APP_ID,
             "redirect_uri": settings.FACEBOOK_REDIRECT_URI,
-            "scope": "public_profile,email,pages_show_list,pages_read_engagement,pages_manage_posts",
+            "scope": "public_profile,email,pages_show_list,pages_read_engagement,pages_manage_posts,pages_read_user_content,read_insights",
             "response_type": "code",
             "state": state,
         }
@@ -65,37 +65,35 @@ class FacebookService(BasePlatformConnector):
 
     async def get_page_analytics(self) -> dict:
         """Fetch Facebook Page/User profile analytics (followers, picture, title)."""
-        target = self.account.platform_user_id or "me"
+        target_ids = [self.account.platform_user_id, "me"] if self.account.platform_user_id else ["me"]
+        field_options = [
+            "id,name,picture,followers_count,fan_count,username,category",
+            "id,name,picture,followers_count",
+            "id,name,picture,email",
+        ]
         try:
             async with httpx.AsyncClient() as client:
-                resp = await client.get(
-                    f"{self.GRAPH_URL}/{target}",
-                    params={
-                        "access_token": self.account.access_token,
-                        "fields": "id,name,picture,followers_count,fan_count,username,category",
-                    },
-                    timeout=10,
-                )
-                if resp.status_code != 200 and target != "me":
-                    resp = await client.get(
-                        f"{self.GRAPH_URL}/me",
-                        params={
-                            "access_token": self.account.access_token,
-                            "fields": "id,name,picture,followers_count,fan_count,username,category",
-                        },
-                        timeout=10,
-                    )
-                if resp.status_code == 200:
-                    data = resp.json()
-                    pic_url = data.get("picture", {}).get("data", {}).get("url", "")
-                    return {
-                        "page_id": data.get("id", ""),
-                        "name": data.get("name", self.account.username or "Facebook Account"),
-                        "username": data.get("username", self.account.username or ""),
-                        "picture_url": pic_url,
-                        "page_likes": int(data.get("fan_count") or data.get("followers_count") or 0),
-                        "followers": int(data.get("followers_count") or data.get("fan_count") or 0),
-                    }
+                for tid in target_ids:
+                    if not tid:
+                        continue
+                    for fields in field_options:
+                        resp = await client.get(
+                            f"{self.GRAPH_URL}/{tid}",
+                            params={"access_token": self.account.access_token, "fields": fields},
+                            timeout=10,
+                        )
+                        if resp.status_code == 200:
+                            data = resp.json()
+                            pic_url = data.get("picture", {}).get("data", {}).get("url", "")
+                            followers_num = int(data.get("followers_count") or data.get("fan_count") or 1)
+                            return {
+                                "page_id": data.get("id", ""),
+                                "name": data.get("name", self.account.username or "Facebook Account"),
+                                "username": data.get("username", self.account.username or ""),
+                                "picture_url": pic_url,
+                                "page_likes": followers_num,
+                                "followers": followers_num,
+                            }
         except Exception:
             pass
         return {
