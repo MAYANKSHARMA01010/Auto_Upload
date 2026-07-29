@@ -54,13 +54,62 @@ const DATE_CHIPS = [
 ];
 
 const PLATFORM_DEFS = [
-  { id: "youtube", label: "YouTube (Shorts & Long Videos)", icon: FaYoutube, color: "text-red-400" },
-  { id: "instagram", label: "Instagram Reels", icon: FaInstagram, color: "text-pink-400" },
-  { id: "facebook", label: "Facebook Reels", icon: FaFacebook, color: "text-blue-400" },
-  { id: "tiktok", label: "TikTok", icon: FaTiktok, color: "text-on-surface" },
-  { id: "x", label: "Twitter", icon: FaXTwitter, color: "text-sky-400" },
-  { id: "snapchat", label: "Snapchat", icon: FaSnapchat, color: "text-yellow-400" },
-  { id: "threads", label: "Threads", icon: FaThreads, color: "text-on-surface" },
+  {
+    id: "youtube",
+    label: "YouTube",
+    icon: FaYoutube,
+    color: "text-red-400",
+    iconContainerBg: "bg-red-500/20 border border-red-500/30",
+    barColor: "bg-red-500",
+  },
+  {
+    id: "instagram",
+    label: "Instagram",
+    icon: FaInstagram,
+    color: "text-pink-400",
+    iconContainerBg: "bg-pink-500/20 border border-pink-500/30",
+    barColor: "bg-pink-500",
+  },
+  {
+    id: "facebook",
+    label: "Facebook Page",
+    icon: FaFacebook,
+    color: "text-blue-400",
+    iconContainerBg: "bg-blue-500/20 border border-blue-500/30",
+    barColor: "bg-blue-500",
+  },
+  {
+    id: "tiktok",
+    label: "TikTok",
+    icon: FaTiktok,
+    color: "text-on-surface",
+    iconContainerBg: "bg-neutral-700/30 border border-neutral-600/30",
+    barColor: "bg-neutral-400",
+  },
+  {
+    id: "x",
+    label: "Twitter (X)",
+    icon: FaXTwitter,
+    color: "text-sky-400",
+    iconContainerBg: "bg-sky-500/20 border border-sky-500/30",
+    barColor: "bg-sky-500",
+  },
+  {
+    id: "snapchat",
+    label: "Snapchat",
+    icon: FaSnapchat,
+    color: "text-yellow-400",
+    iconContainerBg: "bg-yellow-500/20 border border-yellow-500/30",
+    barColor: "bg-yellow-400",
+  },
+  {
+    id: "threads",
+    label: "Threads",
+    icon: FaThreads,
+    color: "text-on-surface",
+    iconContainerBg: "bg-neutral-600/30 border border-neutral-500/30",
+    barColor: "bg-neutral-400",
+  },
 ];
 
 export function UploadModePanel({
@@ -73,12 +122,13 @@ export function UploadModePanel({
   onPrivacyChange,
   onDateChange,
   onTimeChange,
+  onTogglePlatform,
   onPublish,
   onSave,
   isSaving,
-}: UploadModePanelProps) {
+}: UploadModePanelProps & { onTogglePlatform?: (platform: string, enabled: boolean) => void }) {
   // Fetch connected accounts from backend API
-  const { data: connectedAccounts } = useQuery<ConnectedAccount[]>({
+  const { data: connectedAccounts = [] } = useQuery<ConnectedAccount[]>({
     queryKey: ["accounts"],
     queryFn: async () => {
       try {
@@ -90,17 +140,32 @@ export function UploadModePanel({
     },
   });
 
-  // Track selected target account ID for each platform
-  const [selectedAccounts, setSelectedAccounts] = useState<Record<string, string>>({});
+  // Track checked account IDs (initially EMPTY so ALL accounts start UNCHECKED by default)
+  const [checkedAccountIds, setCheckedAccountIds] = useState<Set<string>>(new Set());
+  // Active platform filter pill ("all", "youtube", "instagram", "facebook", "tiktok", "x", "snapchat", "threads")
+  const [activePlatformFilter, setActivePlatformFilter] = useState<string>("all");
   // Track custom schedule per platform (platformId -> "YYYY-MM-DD THH:MM")
   const [customSchedules, setCustomSchedules] = useState<Record<string, { date: string; time: string }>>({});
 
-  const enabledPlatforms = Object.entries(manifest.platforms)
-    .filter(([, v]) => (v as any)?.enabled)
-    .map(([k]) => k);
+  // Toggle account checked state
+  const toggleAccountChecked = (platformId: string, accountId: string) => {
+    setCheckedAccountIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(accountId)) {
+        next.delete(accountId);
+      } else {
+        next.add(accountId);
+      }
 
-  const handleAccountSelect = (platformId: string, accountId: string) => {
-    setSelectedAccounts((prev) => ({ ...prev, [platformId]: accountId }));
+      // Check if at least one account for this platform is checked
+      const platformAccounts = connectedAccounts.filter(
+        (acc) => acc.platform.toLowerCase() === platformId.toLowerCase()
+      );
+      const isPlatformEnabled = platformAccounts.some((acc) => next.has(acc.id));
+      onTogglePlatform?.(platformId, isPlatformEnabled);
+
+      return next;
+    });
   };
 
   const handlePlatformScheduleChange = (platformId: string, field: "date" | "time", val: string) => {
@@ -113,6 +178,25 @@ export function UploadModePanel({
       },
     }));
   };
+
+  // Filter connected accounts based on active platform filter pill (Image 2)
+  const filteredAccounts = connectedAccounts.filter((acc) => {
+    if (activePlatformFilter === "all") return true;
+    return acc.platform.toLowerCase() === activePlatformFilter.toLowerCase();
+  });
+
+  // Sort connected accounts: SELECTED/CHECKED FIRST, then A-Z ALPHABETICALLY by handle/username!
+  const sortedAccounts = [...filteredAccounts].sort((a, b) => {
+    const aSelected = checkedAccountIds.has(a.id);
+    const bSelected = checkedAccountIds.has(b.id);
+    if (aSelected && !bSelected) return -1; // Selected at top!
+    if (!aSelected && bSelected) return 1;
+    const nameA = (a.username || a.handle || a.platform_user_id || "").toLowerCase();
+    const nameB = (b.username || b.handle || b.platform_user_id || "").toLowerCase();
+    return nameA.localeCompare(nameB);
+  });
+
+  const checkedCount = checkedAccountIds.size;
 
   return (
     <div className="space-y-5">
@@ -226,11 +310,11 @@ export function UploadModePanel({
         </div>
       </div>
 
-      {/* 4. Target Accounts & Per-Platform Schedule Section */}
+      {/* 4. Target Accounts Section */}
       <div className="space-y-3 pt-2 border-t border-outline-variant/60">
         <div className="flex items-center justify-between">
           <label className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">
-            Target Accounts & Platform Dispatch ({enabledPlatforms.length} Enabled)
+            Target Accounts & Platform Dispatch ({checkedCount} Selected)
           </label>
           <Link
             href="/accounts"
@@ -241,81 +325,203 @@ export function UploadModePanel({
           </Link>
         </div>
 
-        {enabledPlatforms.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-outline-variant bg-surface-container p-4 text-center space-y-2">
-            <span className="material-symbols-outlined text-on-surface-variant text-2xl">apps_outage</span>
-            <p className="text-xs text-on-surface font-medium">No platforms enabled</p>
-            <p className="text-[10px] text-on-surface-variant">Switch to the Platforms tab to enable social networks.</p>
+        {/* ── Platform Filter Pills (Matching Image 2) ────────────────────────── */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 no-scrollbar">
+          {/* All Pill */}
+          <button
+            type="button"
+            onClick={() => setActivePlatformFilter("all")}
+            className={[
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all flex-shrink-0",
+              activePlatformFilter === "all"
+                ? "bg-primary/20 border-primary text-primary shadow-sm"
+                : "bg-surface-container/80 border-outline-variant text-on-surface-variant hover:border-outline hover:text-on-surface",
+            ].join(" ")}
+          >
+            <span className="material-symbols-outlined text-sm">equalizer</span>
+            <span>All</span>
+            <span className="text-[10px] font-mono opacity-80 bg-surface-container-high px-1.5 py-0.2 rounded-full">
+              {connectedAccounts.length}
+            </span>
+          </button>
+
+          {/* Individual Platform Pills */}
+          {PLATFORM_DEFS.map((def) => {
+            const IconComp = def.icon;
+            const platformCount = connectedAccounts.filter(
+              (acc) => acc.platform.toLowerCase() === def.id.toLowerCase()
+            ).length;
+            const isSelected = activePlatformFilter.toLowerCase() === def.id.toLowerCase();
+
+            return (
+              <button
+                key={def.id}
+                type="button"
+                onClick={() => setActivePlatformFilter(def.id)}
+                className={[
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all flex-shrink-0",
+                  isSelected
+                    ? "bg-primary/20 border-primary text-primary shadow-sm"
+                    : "bg-surface-container/80 border-outline-variant text-on-surface-variant hover:border-outline hover:text-on-surface",
+                ].join(" ")}
+              >
+                <IconComp className={`w-3.5 h-3.5 ${def.color}`} />
+                <span>{def.label.split(" ")[0]}</span>
+                {platformCount > 0 && (
+                  <span className="text-[10px] font-mono opacity-80 bg-surface-container-high px-1.5 py-0.2 rounded-full">
+                    {platformCount}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ── Connected Account Cards Grid (Matching User Screenshot Exactly) ───── */}
+        {sortedAccounts.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-outline-variant/70 bg-surface-container/40 p-6 text-center space-y-2">
+            <span className="material-symbols-outlined text-on-surface-variant text-3xl">manage_accounts</span>
+            <p className="text-xs text-on-surface font-semibold">No accounts found</p>
+            <p className="text-[10px] text-on-surface-variant">
+              Connect target accounts on the Accounts page to dispatch videos.
+            </p>
+            <Link
+              href="/accounts"
+              className="inline-flex items-center gap-1 text-[11px] text-primary bg-primary/10 border border-primary/20 px-3 py-1 rounded-lg hover:bg-primary/20 transition-colors font-medium mt-1"
+            >
+              + Connect Accounts
+            </Link>
           </div>
         ) : (
-          <div className="space-y-3">
-            {enabledPlatforms.map((platformId) => {
-              const def = PLATFORM_DEFS.find((p) => p.id === platformId);
-              if (!def) return null;
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {sortedAccounts.map((account) => {
+              const def = PLATFORM_DEFS.find((p) => p.id.toLowerCase() === account.platform.toLowerCase()) ?? {
+                id: account.platform,
+                label: account.platform,
+                icon: FaYoutube,
+                color: "text-primary",
+                iconContainerBg: "bg-primary/20 border border-primary/30",
+                barColor: "bg-primary",
+              };
               const IconComp = def.icon;
-
-              // Filter connected accounts for this specific platform
-              const platformAccounts = (connectedAccounts ?? []).filter(
-                (acc) => acc.platform.toLowerCase() === platformId.toLowerCase()
-              );
-
-              const currentSelected = selectedAccounts[platformId] ?? (platformAccounts[0]?.id || "default");
-              const customSched = customSchedules[platformId];
+              const isChecked = checkedAccountIds.has(account.id);
+              const customSched = customSchedules[account.platform];
 
               return (
                 <div
-                  key={platformId}
-                  className="rounded-xl border border-outline-variant bg-surface-container p-3 space-y-3"
+                  key={account.id}
+                  onClick={() => toggleAccountChecked(account.platform, account.id)}
+                  className={[
+                    "group relative flex flex-col justify-between rounded-2xl border transition-all duration-200 cursor-pointer overflow-hidden p-4 space-y-3.5 bg-black/40",
+                    isChecked
+                      ? "border-primary/80 bg-primary/10 shadow-[0_0_20px_rgba(195,192,255,0.18)] ring-1 ring-primary/40"
+                      : "border-outline-variant/60 bg-surface-container/60 hover:border-outline hover:bg-surface-container opacity-85 hover:opacity-100",
+                  ].join(" ")}
                 >
-                  {/* Header: Icon + Title + Account Selector */}
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <IconComp className={`w-4 h-4 ${def.color}`} />
-                      <span className="text-xs font-semibold text-on-surface">{def.label}</span>
+                  {/* Top Accent Line */}
+                  <div className={`absolute top-0 left-0 right-0 h-1 ${def.barColor}`} />
+
+                  {/* Top Row: Checkbox + Glowing Green Active Dot */}
+                  <div className="flex items-center justify-between pt-0.5">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          toggleAccountChecked(account.platform, account.id);
+                        }}
+                        className="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary/40 cursor-pointer accent-indigo-500"
+                      />
+                      <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
+                        {isChecked ? "Selected" : "Unchecked"}
+                      </span>
                     </div>
 
-                    {/* Account Dropdown */}
-                    {platformAccounts.length > 0 ? (
-                      <select
-                        value={currentSelected}
-                        onChange={(e) => handleAccountSelect(platformId, e.target.value)}
-                        className="text-[11px] bg-surface-container-high border border-outline-variant rounded-lg px-2.5 py-1 text-on-surface focus:outline-none focus:border-primary/60 transition-colors max-w-[170px] truncate"
-                      >
-                        {platformAccounts.map((acc) => (
-                          <option key={acc.id} value={acc.id}>
-                            @{acc.username || acc.platform_user_id || "Connected Account"}
-                          </option>
-                        ))}
-                      </select>
+                    {/* Shiny Emerald Active Dot */}
+                    <div className="flex items-center gap-1.5">
+                      <span className="relative flex h-2.5 w-2.5 items-center justify-center" title="Account Connected">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Middle Section: Circular Platform Icon + Name & Username (Matching Screenshot Layout) */}
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${def.iconContainerBg}`}>
+                      <IconComp className={`w-5 h-5 ${def.color}`} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-semibold text-on-surface-variant/80 uppercase tracking-wide">
+                        {def.label}
+                      </p>
+                      <h4 className="text-sm font-bold text-on-surface truncate leading-tight">
+                        {account.username || "Connected Account"}
+                      </h4>
+                    </div>
+                  </div>
+
+                  {/* Handle Pill Badge (Matching Screenshot `@choleebhaturer`) */}
+                  <div>
+                    <span className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold bg-surface-container-high border border-outline-variant/40 text-primary">
+                      @{ (account.handle || account.username || "account").replace(/^@+/, "") }
+                    </span>
+                  </div>
+
+                  {/* Email or Subtitle info line */}
+                  <div className="text-[10px] text-on-surface-variant/70 flex items-center gap-1 truncate">
+                    {account.email ? (
+                      <>
+                        <span>📧</span>
+                        <span className="truncate">{account.email}</span>
+                      </>
                     ) : (
-                      <Link
-                        href="/accounts"
-                        className="text-[10px] text-amber-400 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded-md hover:bg-amber-400/20 transition-colors flex items-center gap-1 font-medium"
-                      >
-                        <span className="material-symbols-outlined text-xs">add</span>
-                        Connect Account
-                      </Link>
+                      <>
+                        <span>•</span>
+                        <span>Connected via OAuth</span>
+                      </>
                     )}
                   </div>
 
-                  {/* Per-Platform Custom Schedule Overrides (If in Schedule Mode) */}
-                  {mode === "schedule" && (
-                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-outline-variant/40 text-[10px]">
+                  {/* Bottom Bar: Platform User ID truncated on left + Selection Badge */}
+                  <div className="flex items-center justify-between pt-2 border-t border-outline-variant/30 text-[10px]">
+                    <span className="font-mono text-on-surface-variant/50 truncate max-w-[120px]">
+                      {account.platform_user_id || account.id}
+                    </span>
+                    <span
+                      className={[
+                        "px-2.5 py-1 rounded-lg font-bold text-[10px] transition-all",
+                        isChecked
+                          ? "bg-primary text-on-primary shadow-sm"
+                          : "bg-surface-container-high text-on-surface-variant border border-outline-variant/40",
+                      ].join(" ")}
+                    >
+                      {isChecked ? "✓ Selected" : "Select Card"}
+                    </span>
+                  </div>
+
+                  {/* Per-Platform Custom Schedule Overrides (If in Schedule Mode & Checked) */}
+                  {mode === "schedule" && isChecked && (
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center justify-between gap-2 pt-2 border-t border-outline-variant/40 text-[10px]"
+                    >
                       <span className="text-on-surface-variant font-medium flex items-center gap-1">
-                        <span className="material-symbols-outlined text-xs">schedule</span>
+                        <span className="material-symbols-outlined text-xs text-primary">schedule</span>
                         Platform Time:
                       </span>
                       <div className="flex items-center gap-1.5">
                         <input
                           type="date"
                           value={customSched?.date || scheduleDate}
-                          onChange={(e) => handlePlatformScheduleChange(platformId, "date", e.target.value)}
+                          onChange={(e) => handlePlatformScheduleChange(account.platform, "date", e.target.value)}
                           className="bg-surface-container-high border border-outline-variant rounded px-1.5 py-0.5 text-[10px] text-on-surface focus:outline-none"
                         />
                         <input
                           type="time"
                           value={customSched?.time || scheduleTime}
-                          onChange={(e) => handlePlatformScheduleChange(platformId, "time", e.target.value)}
+                          onChange={(e) => handlePlatformScheduleChange(account.platform, "time", e.target.value)}
                           className="bg-surface-container-high border border-outline-variant rounded px-1.5 py-0.5 text-[10px] text-on-surface focus:outline-none"
                         />
                       </div>
@@ -329,12 +535,12 @@ export function UploadModePanel({
       </div>
 
       {/* 5. Summary Banner */}
-      {enabledPlatforms.length > 0 && (
+      {checkedCount > 0 ? (
         <div className="rounded-xl bg-primary/10 border border-primary/20 p-3 space-y-1">
           <div className="flex items-center justify-between text-xs font-semibold text-primary">
             <span className="flex items-center gap-1.5">
               <span className="material-symbols-outlined text-sm">rocket_launch</span>
-              Ready to Dispatch ({enabledPlatforms.length} Platforms)
+              Ready to Dispatch ({checkedCount} Selected Accounts)
             </span>
             <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-primary/20">
               {mode === "schedule" ? "Scheduled" : "Instant Direct"}
@@ -345,6 +551,11 @@ export function UploadModePanel({
               ? `Shorts will be queued for automatic dispatch on ${scheduleDate || "set date"} at ${scheduleTime || "set time"}.`
               : "Shorts will be uploaded immediately to all selected accounts."}
           </p>
+        </div>
+      ) : (
+        <div className="rounded-xl bg-surface-container border border-outline-variant/60 p-3 text-center space-y-1">
+          <p className="text-xs font-medium text-on-surface-variant">No target accounts checked</p>
+          <p className="text-[10px] text-on-surface-variant opacity-75">Check one or more target accounts above to enable dispatch.</p>
         </div>
       )}
 
@@ -364,7 +575,7 @@ export function UploadModePanel({
         </button>
         <button
           onClick={onPublish}
-          disabled={enabledPlatforms.length === 0}
+          disabled={checkedCount === 0}
           className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-on-primary text-xs font-semibold hover:bg-primary/90 shadow-[0_0_16px_rgba(195,192,255,0.25)] hover:shadow-[0_0_24px_rgba(195,192,255,0.4)] transition-all active:scale-95 disabled:opacity-40"
         >
           <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>rocket_launch</span>

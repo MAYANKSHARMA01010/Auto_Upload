@@ -127,7 +127,7 @@ export function MetadataStudio({ manifest, projectId, onManifestChange }: Metada
       </div>
 
       {/* Section Content */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-5">
+      <div className="flex-1 overflow-y-auto p-4 space-y-5 pb-32 md:pb-6 touch-pan-y no-scrollbar">
 
         {/* ── Master Metadata ─────────────────────────── */}
         {activeSection === "master" && (
@@ -350,6 +350,7 @@ export function MetadataStudio({ manifest, projectId, onManifestChange }: Metada
             onPrivacyChange={setPrivacy}
             onDateChange={setScheduleDate}
             onTimeChange={setScheduleTime}
+            onTogglePlatform={togglePlatform}
             onPublish={handlePublish}
             onSave={handleManualSave}
             isSaving={isSaving}

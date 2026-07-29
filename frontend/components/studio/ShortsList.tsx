@@ -175,7 +175,7 @@ export function ShortsList({ manifests, selectedId, loading, error, onSelect }: 
   }
 
   return (
-    <div className="flex-1 w-full p-3 space-y-3.5 overflow-y-auto min-h-0 touch-pan-y pb-28 md:pb-6 no-scrollbar">
+    <div className="flex-1 w-full p-3 space-y-3.5 overflow-y-auto min-h-0 touch-pan-y pb-36 md:pb-6 no-scrollbar">
       {/* Category Tabs Header */}
       <div className="flex flex-col gap-2 border-b border-outline-variant/40 pb-2.5">
         <div className="px-1 flex items-center justify-between">

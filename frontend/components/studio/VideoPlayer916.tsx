@@ -182,9 +182,9 @@ export function VideoPlayer916({ videoPath, coverPath, projectTitle, onCoverCapt
   };
 
   return (
-    <div className="flex flex-col items-center justify-between gap-2.5 h-full w-full overflow-hidden no-scrollbar pb-2 pr-0.5">
-      {/* 9:16 Video Container (Fills Full Available Column Height) */}
-      <div className="relative rounded-2xl overflow-hidden bg-black shadow-2xl border border-outline-variant flex-1 min-h-[480px] w-full max-w-[310px] aspect-[9/16]">
+    <div className="flex flex-col items-center justify-start gap-2.5 w-full max-w-[320px] mx-auto py-1">
+      {/* 9:16 Video Container */}
+      <div className="relative rounded-2xl overflow-hidden bg-black shadow-2xl border border-outline-variant w-full max-w-[310px] aspect-[9/16] shrink-0">
         {videoUrl && !videoError ? (
           <video
             ref={videoRef}

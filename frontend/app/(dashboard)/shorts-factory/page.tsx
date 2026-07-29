@@ -181,11 +181,11 @@ export default function ShortsFactoryPage() {
         </div>
 
         {/* ── COLUMN 2: Video Player (Responsive Width) ────────────────── */}
-        <div className={`w-full md:w-[320px] lg:w-[350px] xl:w-[380px] flex-shrink-0 border-r border-outline-variant flex flex-col bg-surface-container-low overflow-hidden ${
+        <div className={`w-full md:w-[320px] lg:w-[350px] xl:w-[380px] flex-shrink-0 border-r border-outline-variant flex flex-col bg-surface-container-low h-full min-h-0 overflow-y-auto md:overflow-hidden touch-pan-y no-scrollbar ${
           mobileTab !== "preview" ? "hidden md:flex" : "flex"
         }`}>
           {/* Header */}
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-outline-variant flex-shrink-0">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-outline-variant flex-shrink-0 bg-surface-container-low sticky top-0 z-20">
             <span className="material-symbols-outlined text-secondary text-lg">play_circle</span>
             <span className="text-sm font-bold text-on-surface">Preview</span>
             {selectedSummary && (
@@ -196,9 +196,9 @@ export default function ShortsFactoryPage() {
           </div>
 
           {/* Player content */}
-          <div className="flex-1 overflow-hidden p-3 flex flex-col items-center justify-center min-h-0">
+          <div className="w-full flex-1 p-3 flex flex-col items-center justify-start md:justify-center min-h-0 touch-pan-y pb-36 md:pb-3">
             {detailLoading ? (
-              <div className="flex items-center justify-center h-full">
+              <div className="flex items-center justify-center h-full py-12">
                 <div className="flex flex-col items-center gap-3">
                   <span className="material-symbols-outlined text-primary text-4xl animate-spin">autorenew</span>
                   <p className="text-xs text-on-surface-variant">Loading video…</p>
@@ -243,9 +243,9 @@ export default function ShortsFactoryPage() {
           </div>
 
           {/* Studio content */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto no-scrollbar touch-pan-y">
             {detailLoading ? (
-              <div className="flex items-center justify-center h-full">
+              <div className="flex items-center justify-center h-full py-12">
                 <span className="material-symbols-outlined text-primary text-3xl animate-spin">autorenew</span>
               </div>
             ) : activeManifest && selectedId ? (
