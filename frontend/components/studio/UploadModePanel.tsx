@@ -127,9 +127,10 @@ export function UploadModePanel({
   onSave,
   isSaving,
 }: UploadModePanelProps & { onTogglePlatform?: (platform: string, enabled: boolean) => void }) {
-  // Fetch connected accounts from backend API
+  // Fetch connected accounts from backend API (staleTime 5 minutes to prevent duplicate refetches)
   const { data: connectedAccounts = [] } = useQuery<ConnectedAccount[]>({
     queryKey: ["accounts"],
+    staleTime: 1000 * 60 * 5,
     queryFn: async () => {
       try {
         const res = await api.get("/accounts");

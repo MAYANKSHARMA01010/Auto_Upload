@@ -66,16 +66,22 @@ export default function ShortsFactoryPage() {
   // Mobile view tab state: 'library' | 'preview' | 'metadata'
   const [mobileTab, setMobileTab] = useState<"library" | "preview" | "metadata">("library");
 
-  // Scan on mount
+  // Prevent duplicate scan calls on mount/re-renders
   useEffect(() => {
+    let isMounted = true;
     (async () => {
       setScanLoading(true);
       const { manifests: list, error } = await fetchManifests(accessToken ?? undefined);
-      setManifests(list);
-      setScanError(error);
-      setScanLoading(false);
+      if (isMounted) {
+        setManifests(list);
+        setScanError(error);
+        setScanLoading(false);
+      }
     })();
-  }, [accessToken]);
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Load detail when selection changes
   const handleSelect = useCallback(async (id: string) => {

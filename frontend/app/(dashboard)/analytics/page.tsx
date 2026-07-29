@@ -131,8 +131,18 @@ export default function AnalyticsPage() {
     }
   });
 
+  // Deduplicate by normalized title & ID
+  const uniquePostsMap = new Map<string, any>();
+  mergedUnifiedPosts.forEach((post: any) => {
+    const key = (post.title || post.id || "").trim().toLowerCase();
+    if (!uniquePostsMap.has(key)) {
+      uniquePostsMap.set(key, post);
+    }
+  });
+  const deduplicatedPosts = Array.from(uniquePostsMap.values());
+
   // Filter unified posts by category tab & timeframe
-  const finalDisplayPosts = mergedUnifiedPosts.filter((post: any) => {
+  const finalDisplayPosts = deduplicatedPosts.filter((post: any) => {
     // 1. Category Filter
     if (selectedCategory !== "all" && post.status !== selectedCategory) {
       return false;

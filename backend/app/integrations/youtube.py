@@ -154,10 +154,16 @@ class YouTubeService(BasePlatformConnector):
         """Fetch YouTube channel snippet and statistics (subscribers, views, video count). Auto-refreshes token if expired."""
         try:
             async with httpx.AsyncClient() as client:
+                params = {"part": "snippet,statistics,contentDetails"}
+                if self.account.platform_user_id and str(self.account.platform_user_id).startswith("UC"):
+                    params["id"] = self.account.platform_user_id
+                else:
+                    params["mine"] = "true"
+
                 resp = await client.get(
                     f"{self.API_BASE}/channels",
                     headers=self._headers(),
-                    params={"part": "snippet,statistics,contentDetails", "mine": "true"},
+                    params=params,
                     timeout=10,
                 )
                 if resp.status_code == 401:
@@ -166,18 +172,39 @@ class YouTubeService(BasePlatformConnector):
                         resp = await client.get(
                             f"{self.API_BASE}/channels",
                             headers=self._headers(),
-                            params={"part": "snippet,statistics,contentDetails", "mine": "true"},
+                            params=params,
                             timeout=10,
                         )
+
+                # Fallback to mine=true if specific ID query returned no items
+                if resp.status_code == 200 and not resp.json().get("items"):
+                    resp = await client.get(
+                        f"{self.API_BASE}/channels",
+                        headers=self._headers(),
+                        params={"part": "snippet,statistics,contentDetails", "mine": "true"},
+                        timeout=10,
+                    )
                 if resp.status_code == 200:
-                    items = resp.json().get("items", [])
+                    items = resp.json().get("data", []) if "data" in resp.json() else resp.json().get("items", [])
                     if items:
-                        item = items[0]
-                        snippet = item.get("snippet", {})
-                        stats = item.get("statistics", {})
-                        uploads_playlist = item.get("contentDetails", {}).get("relatedPlaylists", {}).get("uploads", "")
+                        # Select best channel (Brand channel with subscribers/views/videos over empty personal profile)
+                        best_item = items[0]
+                        best_score = -1
+                        for it in items:
+                            st = it.get("statistics", {})
+                            subs = int(st.get("subscriberCount", 0))
+                            views = int(st.get("viewCount", 0))
+                            vids = int(st.get("videoCount", 0))
+                            score = subs * 10000 + views + vids * 10
+                            if score > best_score:
+                                best_score = score
+                                best_item = it
+
+                        snippet = best_item.get("snippet", {})
+                        stats = best_item.get("statistics", {})
+                        uploads_playlist = best_item.get("contentDetails", {}).get("relatedPlaylists", {}).get("uploads", "")
                         return {
-                            "channel_id": item.get("id", ""),
+                            "channel_id": best_item.get("id", ""),
                             "title": snippet.get("title", self.account.username or "YouTube Channel"),
                             "custom_url": snippet.get("customUrl", ""),
                             "avatar_url": snippet.get("thumbnails", {}).get("default", {}).get("url", ""),

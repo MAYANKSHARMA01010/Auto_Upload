@@ -94,7 +94,7 @@ class InstagramService(BasePlatformConnector):
                     resp = await client.get(
                         f"{api_url}/me",
                         params={"access_token": self.account.access_token, "fields": fields},
-                        timeout=10,
+                        timeout=4,
                     )
                     if resp.status_code == 200:
                         data = resp.json()
@@ -107,6 +107,8 @@ class InstagramService(BasePlatformConnector):
                             "following": int(data.get("follows_count", 0)),
                             "total_media": int(data.get("media_count", 0)),
                         }
+                    if resp.status_code == 401:
+                        break
         except Exception:
             pass
         return {
@@ -126,7 +128,6 @@ class InstagramService(BasePlatformConnector):
         is_basic_token = (self.account.access_token or "").startswith("IG")
 
         field_options = [
-            "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count,view_count,play_count",
             "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count",
             "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp",
         ]
@@ -141,7 +142,7 @@ class InstagramService(BasePlatformConnector):
                             "fields": fields,
                             "limit": max_results,
                         },
-                        timeout=10,
+                        timeout=4,
                     )
                     if resp.status_code == 200:
                         raw_items = resp.json().get("data", [])

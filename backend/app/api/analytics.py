@@ -185,7 +185,7 @@ async def get_social_insights(
         )
         cache_res = await cache_db.execute(cache_query)
         cached_record = cache_res.scalar_one_or_none()
-        if cached_record and cached_record.data:
+        if cached_record and cached_record.data and len(cached_record.data.get("platform_media", [])) > 0:
             return cached_record.data
 
     # 1. Query connected accounts for this platform
@@ -199,6 +199,15 @@ async def get_social_insights(
     all_accounts = acc_result.scalars().all()
 
     # Filter connected accounts matching target platform
+    def is_matching_platform(acc_platform_str: str, target_p: str) -> bool:
+        acc_p = (acc_platform_str or "").lower()
+        target_p = (target_p or "").lower()
+        if target_p.startswith("facebook"):
+            return acc_p.startswith("facebook")
+        if target_p.startswith("instagram"):
+            return acc_p.startswith("instagram")
+        return acc_p == target_p
+
     platform_accounts = [
         {
             "id": str(acc.id),
@@ -208,7 +217,7 @@ async def get_social_insights(
             "created_at": acc.created_at.isoformat() if acc.created_at else None,
         }
         for acc in all_accounts
-        if (acc.platform.value if hasattr(acc.platform, "value") else str(acc.platform)).lower() == p_lower
+        if is_matching_platform(acc.platform.value if hasattr(acc.platform, "value") else str(acc.platform), p_lower)
     ]
 
     # Select target account
@@ -242,6 +251,10 @@ async def get_social_insights(
                 svc = YouTubeService(selected_account_obj)
                 account_metrics = await svc.get_channel_analytics()
                 platform_media = await svc.get_video_analytics(uploads_playlist=account_metrics.get("uploads_playlist", ""))
+                if account_metrics.get("total_views", 0) == 0 and platform_media:
+                    computed_views = sum(int(m.get("views", 0)) for m in platform_media)
+                    if computed_views > 0:
+                        account_metrics["total_views"] = computed_views
             elif p_lower == "instagram":
                 svc = InstagramService(selected_account_obj)
                 account_metrics = await svc.get_account_analytics()
