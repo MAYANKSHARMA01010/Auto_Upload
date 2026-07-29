@@ -123,7 +123,7 @@ export function VideoPlayer916({ videoPath, coverPath, projectTitle, onCoverCapt
   const [isDownloading, setIsDownloading] = useState(false);
 
   const handleDownloadOriginal = async () => {
-    if (!videoUrl || isDownloading) return;
+    if ((!videoPath && !videoUrl) || isDownloading) return;
     setIsDownloading(true);
 
     const cleanTitle = (projectTitle || "short_video")
@@ -133,8 +133,8 @@ export function VideoPlayer916({ videoPath, coverPath, projectTitle, onCoverCapt
     const suggestedName = `${cleanTitle}_original_max_quality.mp4`;
 
     try {
-      // 1. Native OS "Save As..." File Picker API (Asks user where to save file!)
-      if ("showSaveFilePicker" in window) {
+      // 1. Desktop Chrome/Edge with native File System Access API (Asks user where to save file!)
+      if (typeof window !== "undefined" && "showSaveFilePicker" in window) {
         try {
           const handle = await (window as any).showSaveFilePicker({
             suggestedName,
@@ -156,17 +156,26 @@ export function VideoPlayer916({ videoPath, coverPath, projectTitle, onCoverCapt
         }
       }
 
-      // 2. Fallback: Fetch blob & trigger link download
-      const res = await fetch(videoUrl);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
+      // 2. Direct Backend Streaming Attachment Download (INSTANT ON IPHONE / MOBILE & NGROK!)
+      // Uses /api/v1/manifests/download-video with Content-Disposition: attachment header
+      // so iOS Safari & Mobile Chrome start native background download INSTANTLY without JS memory buffering!
+      const downloadEndpoint = `/api/v1/manifests/download-video?video_path=${encodeURIComponent(
+        videoPath || videoUrl
+      )}&filename=${encodeURIComponent(suggestedName)}`;
+
       const link = document.createElement("a");
-      link.href = url;
+      link.href = downloadEndpoint;
       link.download = suggestedName;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
       document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+
+      setTimeout(() => {
+        if (document.body.contains(link)) {
+          document.body.removeChild(link);
+        }
+      }, 300);
     } catch {
       window.open(videoUrl, "_blank");
     } finally {

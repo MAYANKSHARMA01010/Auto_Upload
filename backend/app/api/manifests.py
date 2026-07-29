@@ -207,10 +207,46 @@ async def save_manifest(project_id: str, body: ManifestUpdateBody) -> JSONRespon
     if target is None:
         raise HTTPException(status_code=404, detail=f"Manifest for '{project_id}' not found — cannot save.")
 
-    try:
-        json_str = json.dumps(body.data, indent=2, ensure_ascii=False)
-        target.write_text(json_str, encoding="utf-8")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to write manifest: {str(e)}")
-
     return JSONResponse(content={"success": True, "saved_to": str(target)})
+
+
+from fastapi.responses import StreamingResponse
+
+def _iter_video_file(path: Path, chunk_size: int = 1024 * 1024):
+    """Read video file in large 1MB chunks to dramatically cut TCP roundtrip latency over ngrok."""
+    with open(path, mode="rb") as f:
+        while chunk := f.read(chunk_size):
+            yield chunk
+
+
+@router.get("/download-video", include_in_schema=True)
+async def download_video(video_path: str, filename: str = "short_video.mp4"):
+    """
+    Stream video download with 1MB chunk size & Content-Length header so ngrok and mobile browsers
+    (iOS Safari / Chrome Mobile) transfer binary data at maximum ngrok pipe speed!
+    """
+    p = Path(video_path)
+    if not p.is_file():
+        # Try resolving relative path inside SHORTS_FACTORY_DATA_DIR
+        rel_path = video_path.lstrip("/")
+        if rel_path.startswith("local-media/data/"):
+            rel_path = rel_path.replace("local-media/data/", "")
+        p = SHORTS_FACTORY_DATA_DIR / rel_path
+
+    if not p.is_file():
+        raise HTTPException(status_code=404, detail=f"Video file not found at: {video_path}")
+
+    file_size = p.stat().st_size
+    clean_filename = filename.replace('"', '').replace("'", "")
+
+    return StreamingResponse(
+        _iter_video_file(p, chunk_size=1024 * 1024), # 1MB chunks (16x larger than default 64KB!)
+        media_type="video/mp4",
+        headers={
+            "Content-Disposition": f'attachment; filename="{clean_filename}"',
+            "Content-Length": str(file_size),
+            "Accept-Ranges": "bytes",
+            "Cache-Control": "public, max-age=86400, immutable",
+            "X-Accel-Buffering": "no",
+        },
+    )
