@@ -86,10 +86,19 @@ export default function AnalyticsPage() {
   const matchedMediaIds = new Set<string>();
 
   const mergedUnifiedPosts = localVideos.map((lv: any) => {
-    // Attempt to match with live platform media by platform_post_id or id
-    const match = platformMedia.find(
-      (m: any) => m.id === lv.platform_post_id || m.id === lv.id
-    );
+    // Attempt to match with live platform media by platform_post_id or id (handling page_id_post_id composite IDs)
+    const match = platformMedia.find((m: any) => {
+      if (!m.id) return false;
+      const mId = String(m.id);
+      const lvPlatformId = String(lv.platform_post_id || "");
+      const lvId = String(lv.id || "");
+      return (
+        mId === lvPlatformId ||
+        mId === lvId ||
+        (lvPlatformId && (mId.endsWith(`_${lvPlatformId}`) || lvPlatformId.endsWith(`_${mId}`) || mId.includes(lvPlatformId))) ||
+        (lvId && (mId.endsWith(`_${lvId}`) || lvId.endsWith(`_${mId}`) || mId.includes(lvId)))
+      );
+    });
     if (match) {
       matchedMediaIds.add(match.id);
     }

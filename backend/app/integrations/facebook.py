@@ -136,11 +136,27 @@ class FacebookService(BasePlatformConnector):
         }
 
     async def get_post_analytics(self, max_results: int = 25) -> list[dict]:
-        """Fetch Facebook Page & Profile published videos, reels, photos, and feed posts with views, likes, comments."""
+        """Fetch Facebook Page & Profile published videos, reels, photos, and feed posts with resilient metrics (views, likes, comments)."""
         items = []
         seen_ids = set()
         seen_titles = set()
         target_ids = [self.account.platform_user_id, "me"] if self.account.platform_user_id else ["me"]
+
+        def parse_counts(obj: dict) -> tuple[int, int, int]:
+            v_cnt = int(obj.get("views", 0))
+            r_cnt = 0
+            reacts = obj.get("reactions")
+            likes = obj.get("likes")
+            if isinstance(reacts, dict):
+                r_cnt = int(reacts.get("summary", {}).get("total_count", 0))
+            elif isinstance(likes, dict):
+                r_cnt = int(likes.get("summary", {}).get("total_count", 0))
+
+            c_cnt = 0
+            cmts = obj.get("comments")
+            if isinstance(cmts, dict):
+                c_cnt = int(cmts.get("summary", {}).get("total_count", 0))
+            return v_cnt, r_cnt, c_cnt
 
         try:
             async with httpx.AsyncClient() as client:
@@ -151,26 +167,27 @@ class FacebookService(BasePlatformConnector):
 
                     # 1. Fetch Video Reels & Page Videos first
                     for video_ep in ["video_reels", "videos"]:
-                        p_resp = await client.get(
-                            f"{self.GRAPH_URL}/{tid}/{video_ep}",
-                            params={
-                                "access_token": token,
-                                "fields": "id,title,description,picture,permalink_url,created_time,views,reactions.summary(true),comments.summary(true)",
-                                "limit": max_results,
-                            },
-                            timeout=5,
-                        )
-                        if p_resp.status_code == 400:
+                        field_attempts = [
+                            "id,title,description,picture,permalink_url,created_time,views,reactions.summary(true),comments.summary(true)",
+                            "id,title,description,picture,permalink_url,created_time,views,comments.summary(true)",
+                            "id,title,description,picture,permalink_url,created_time,views",
+                            "id,title,description,picture,permalink_url,created_time",
+                        ]
+                        p_resp = None
+                        for f_opts in field_attempts:
                             p_resp = await client.get(
                                 f"{self.GRAPH_URL}/{tid}/{video_ep}",
                                 params={
                                     "access_token": token,
-                                    "fields": "id,title,description,picture,permalink_url,created_time,views",
+                                    "fields": f_opts,
                                     "limit": max_results,
                                 },
                                 timeout=5,
                             )
-                        if p_resp.status_code == 200:
+                            if p_resp.status_code == 200:
+                                break
+
+                        if p_resp and p_resp.status_code == 200:
                             v_data = p_resp.json().get("data", [])
                             for v in v_data:
                                 v_id = str(v.get("id", ""))
@@ -178,15 +195,7 @@ class FacebookService(BasePlatformConnector):
                                     continue
                                 title_text = v.get("title") or v.get("description") or f"Facebook Video ({v_id[-6:]})"
                                 norm_title = title_text.strip().lower()
-
-                                reactions_dict = v.get("reactions", {})
-                                reactions_count = reactions_dict.get("summary", {}).get("total_count", 0) if isinstance(reactions_dict, dict) else 0
-                                likes_dict = v.get("likes", {})
-                                likes_count = likes_dict.get("summary", {}).get("total_count", 0) if isinstance(likes_dict, dict) else reactions_count
-
-                                comments_dict = v.get("comments", {})
-                                comments_count = comments_dict.get("summary", {}).get("total_count", 0) if isinstance(comments_dict, dict) else 0
-                                views_count = int(v.get("views", 0))
+                                views_cnt, likes_cnt, cmts_cnt = parse_counts(v)
 
                                 seen_ids.add(v_id)
                                 if norm_title:
@@ -199,35 +208,35 @@ class FacebookService(BasePlatformConnector):
                                     "thumbnail_url": v.get("picture", ""),
                                     "permalink": v.get("permalink_url") or f"https://www.facebook.com/{v_id}",
                                     "published_at": v.get("created_time", ""),
-                                    "views": views_count,
-                                    "likes": int(likes_count or reactions_count),
-                                    "reactions": int(reactions_count or likes_count),
-                                    "comments": int(comments_count),
+                                    "views": views_cnt,
+                                    "likes": likes_cnt,
+                                    "reactions": likes_cnt,
+                                    "comments": cmts_cnt,
                                     "shares": 0,
                                 })
 
                     # 2. ALWAYS Fetch Feed & Published Posts (Photos, Statuses, Links)
                     for endpoint in ["published_posts", "feed", "posts"]:
-                        p_resp = await client.get(
-                            f"{self.GRAPH_URL}/{tid}/{endpoint}",
-                            params={
-                                "access_token": token,
-                                "fields": "id,message,description,created_time,full_picture,permalink_url,reactions.summary(true),comments.summary(true),shares",
-                                "limit": max_results,
-                            },
-                            timeout=5,
-                        )
-                        if p_resp.status_code == 400:
+                        post_field_attempts = [
+                            "id,message,description,created_time,full_picture,permalink_url,reactions.summary(true),comments.summary(true),shares",
+                            "id,message,description,created_time,full_picture,permalink_url,reactions.summary(true)",
+                            "id,message,created_time,full_picture,permalink_url",
+                        ]
+                        p_resp = None
+                        for f_opts in post_field_attempts:
                             p_resp = await client.get(
                                 f"{self.GRAPH_URL}/{tid}/{endpoint}",
                                 params={
                                     "access_token": token,
-                                    "fields": "id,message,created_time,full_picture,permalink_url",
+                                    "fields": f_opts,
                                     "limit": max_results,
                                 },
                                 timeout=5,
                             )
-                        if p_resp.status_code == 200:
+                            if p_resp.status_code == 200:
+                                break
+
+                        if p_resp and p_resp.status_code == 200:
                             posts_data = p_resp.json().get("data", [])
                             for post in posts_data:
                                 p_id = str(post.get("id", ""))
@@ -239,34 +248,49 @@ class FacebookService(BasePlatformConnector):
                                 if norm_title and norm_title in seen_titles:
                                     continue
 
-                                reactions_dict = post.get("reactions", {})
-                                reactions_count = reactions_dict.get("summary", {}).get("total_count", 0) if isinstance(reactions_dict, dict) else 0
-                                likes_dict = post.get("likes", {})
-                                likes_count = likes_dict.get("summary", {}).get("total_count", 0) if isinstance(likes_dict, dict) else reactions_count
-
-                                comments_dict = post.get("comments", {})
-                                comments_count = comments_dict.get("summary", {}).get("total_count", 0) if isinstance(comments_dict, dict) else 0
-                                shares_count = post.get("shares", {}).get("count", 0) if isinstance(post.get("shares"), dict) else 0
+                                views_cnt, likes_cnt, cmts_cnt = parse_counts(post)
+                                shares_dict = post.get("shares", {})
+                                shares_cnt = shares_dict.get("count", 0) if isinstance(shares_dict, dict) else 0
 
                                 seen_ids.add(p_id)
                                 if norm_title:
                                     seen_titles.add(norm_title)
 
-                                items.append({
-                                    "id": p_id,
-                                    "title": title_text,
-                                    "message": title_text,
-                                    "thumbnail_url": post.get("full_picture", ""),
-                                    "permalink": post.get("permalink_url") or f"https://www.facebook.com/{p_id}",
-                                    "published_at": post.get("created_time", ""),
-                                    "views": 0,
-                                    "likes": int(likes_count or reactions_count),
-                                    "reactions": int(reactions_count or likes_count),
-                                    "comments": int(comments_count),
-                                    "shares": int(shares_count),
-                                })
-                            if posts_data:
-                                break
+                # Enrich post impressions for items with views == 0 using effective page token
+                for item in items:
+                    if item.get("views", 0) == 0 and item.get("id"):
+                        try:
+                            item_tid = item["id"].split("_")[0] if "_" in item["id"] else (self.account.platform_user_id or "me")
+                            e_token = await self._get_effective_token(client, item_tid)
+
+                            # 1. Try video views field
+                            i_resp = await client.get(
+                                f"{self.GRAPH_URL}/{item['id']}",
+                                params={"access_token": e_token, "fields": "views"},
+                                timeout=3,
+                            )
+                            if i_resp.status_code == 200 and i_resp.json().get("views") is not None:
+                                item["views"] = int(i_resp.json().get("views", 0))
+
+                            # 2. Try post impressions insight if views is still 0
+                            if item.get("views", 0) == 0:
+                                i_resp = await client.get(
+                                    f"{self.GRAPH_URL}/{item['id']}/insights",
+                                    params={"access_token": e_token, "metric": "post_impressions,post_impressions_unique"},
+                                    timeout=3,
+                                )
+                                if i_resp.status_code == 200:
+                                    idata = i_resp.json().get("data", [])
+                                    for m in idata:
+                                        if m.get("name") in ("post_impressions", "post_impressions_unique"):
+                                            vals = m.get("values", [])
+                                            if vals and isinstance(vals[0], dict):
+                                                val_num = vals[0].get("value", 0)
+                                                if isinstance(val_num, int) and val_num > 0:
+                                                    item["views"] = val_num
+                                                    break
+                        except Exception:
+                            pass
         except Exception:
             pass
         return items
